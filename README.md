@@ -1,0 +1,2 @@
+# skeleton
+Microservice generation template

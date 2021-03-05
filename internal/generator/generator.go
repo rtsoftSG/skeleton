@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"embed"
 	"io"
-	"io/fs"
 	"os"
 	"path"
 	"text/template"
@@ -120,12 +119,8 @@ func (g *generator) createDirectoryLayout() error {
 }
 
 func (g *generator) writeGoMod(w io.Writer) error {
-	data, err := fs.ReadFile(templates, "assets/gomod.txt")
-	if err != nil {
-		return err
-	}
+	tpl, err := template.New("gomod.txt").ParseFS(templates, "assets/gomod.txt")
 
-	tpl, err := template.New("gomod tpl").Parse(string(data))
 	if err != nil {
 		return err
 	}
@@ -134,12 +129,7 @@ func (g *generator) writeGoMod(w io.Writer) error {
 }
 
 func (g *generator) writeMain(w io.Writer) error {
-	data, err := fs.ReadFile(templates, "assets/main.txt")
-	if err != nil {
-		return err
-	}
-
-	tpl, err := template.New("main tpl").Parse(string(data))
+	tpl, err := template.New("main.txt").ParseFS(templates, "assets/main.txt")
 	if err != nil {
 		return err
 	}
@@ -152,11 +142,7 @@ func (g *generator) writeMain(w io.Writer) error {
 }
 
 func (g *generator) writeLogger(w io.Writer) error {
-	data, err := fs.ReadFile(templates, "assets/logger.txt")
-	if err != nil {
-		return err
-	}
-	tpl, err := template.New("logger tpl").Parse(string(data))
+	tpl, err := template.New("logger.txt").ParseFS(templates, "assets/logger.txt")
 	if err != nil {
 		return err
 	}
@@ -168,11 +154,7 @@ func (g *generator) writeLogger(w io.Writer) error {
 }
 
 func (g *generator) writeConfig(w io.Writer) error {
-	data, err := fs.ReadFile(templates, "assets/config.txt")
-	if err != nil {
-		return err
-	}
-	tpl, err := template.New("config tpl").Parse(string(data))
+	tpl, err := template.New("config.txt").ParseFS(templates, "assets/config.txt")
 	if err != nil {
 		return err
 	}
@@ -188,11 +170,7 @@ func (g *generator) writeConfig(w io.Writer) error {
 }
 
 func (g *generator) writeConfigYml(w io.Writer) error {
-	data, err := fs.ReadFile(templates, "assets/config_yml.txt")
-	if err != nil {
-		return err
-	}
-	tpl, err := template.New("config yml tpl").Parse(string(data))
+	tpl, err := template.New("config_yml.txt").ParseFS(templates, "assets/config_yml.txt")
 	if err != nil {
 		return err
 	}
@@ -207,11 +185,7 @@ func (g *generator) writeConfigYml(w io.Writer) error {
 }
 
 func (g *generator) writeTracer(w io.Writer) error {
-	data, err := fs.ReadFile(templates, "assets/tracer.txt")
-	if err != nil {
-		return err
-	}
-	tpl, err := template.New("tracer tpl").Parse(string(data))
+	tpl, err := template.New("tracer.txt").ParseFS(templates, "assets/tracer.txt")
 	if err != nil {
 		return err
 	}

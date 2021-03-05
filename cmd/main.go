@@ -17,6 +17,9 @@ func main() {
 	if err := runChooseConsulMenu(&generatorSettings); err != nil {
 		log.Fatal(err)
 	}
+	if err := runChooseJaegerMenu(&generatorSettings); err != nil {
+		log.Fatal(err)
+	}
 	if err := runChooseLoggerMenu(&generatorSettings); err != nil {
 		log.Fatal(err)
 	}
@@ -40,11 +43,38 @@ func runChooseConsulMenu(s *generator.Settings) error {
 	consulMenu.AddColor(wlog.None, wlog.BrightGreen, wlog.None, wlog.Red)
 
 	consulMenu.Action(func(opts []wmenu.Opt) error {
-		s.Consul = opts[0].Value.(string) == "yes"
+		s.UseConsul = opts[0].Value.(string) == "yes"
+
+		if s.UseConsul {
+			m := wmenu.NewMenu("Sync config with consul?")
+			m.IsYesNo(wmenu.DefY)
+			m.AddColor(wlog.None, wlog.BrightGreen, wlog.None, wlog.Red)
+			m.Action(func(opts []wmenu.Opt) error {
+				s.SyncConfigWithConsul = opts[0].Value.(string) == "yes"
+				return nil
+			})
+			return m.Run()
+		}
+
 		return nil
 	})
 
 	return consulMenu.Run()
+}
+
+func runChooseJaegerMenu(s *generator.Settings) error {
+	defer fmt.Print("\n")
+
+	jaegerMenu := wmenu.NewMenu("Use jaeger tracer?")
+	jaegerMenu.IsYesNo(wmenu.DefY)
+	jaegerMenu.AddColor(wlog.None, wlog.BrightGreen, wlog.None, wlog.Red)
+
+	jaegerMenu.Action(func(opts []wmenu.Opt) error {
+		s.UseJaeger = opts[0].Value.(string) == "yes"
+		return nil
+	})
+
+	return jaegerMenu.Run()
 }
 
 func runChooseLoggerMenu(s *generator.Settings) error {
@@ -77,7 +107,8 @@ func runChooseDBMenu(s *generator.Settings) error {
 		s.Database = opts[0].Value.(generator.DBChoice)
 		return nil
 	})
-	dbMenu.Option(string(generator.Clickhouse), generator.Clickhouse, true, nil)
+	dbMenu.Option(string(generator.NoDb), generator.NoDb, true, nil)
+	dbMenu.Option(string(generator.Clickhouse), generator.Clickhouse, false, nil)
 	dbMenu.Option(string(generator.Postgresql), generator.Postgresql, false, nil)
 	return dbMenu.Run()
 }

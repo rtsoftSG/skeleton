@@ -1,0 +1,62 @@
+package main
+
+import (
+	"context"
+	"flag"
+	{{if .use_gokit_logger}}"github.com/go-kit/kit/log/level"{{end}}
+	"log"
+	{{if .use_gokit_logger}}"os"{{end}}
+	"os/signal"
+	"sync"
+	"syscall"
+	"{{.module}}/internal"
+	"{{.module}}/internal/config"
+	applogger "{{.module}}/internal/infrastructure/logger"
+)
+
+var cfgName = flag.String("cfg", "config", "path to config file")
+
+func main() {
+	flag.Parse()
+
+	cfg, err := config.LoadConfig(*cfgName)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	logger := applogger.NewLogger()
+
+    ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+    defer cancel()
+
+	app := internal.NewApp(cfg, internal.WithLogger(logger))
+
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := app.Run(ctx); err != nil {
+            {{- if .use_gokit_logger}}
+            level.Error(logger).Log("init", err)
+			os.Exit(1)
+			{{- end}}
+            {{- if .use_zap_logger}}
+            logger.Error("init", zap.Error(err))
+            {{- end}}
+		}
+	}()
+
+	<-ctx.Done()
+	cancel()
+
+	if err := app.Stop(); err != nil {
+        {{- if .use_gokit_logger}}
+        level.Error(logger).Log("stop app", err)
+		os.Exit(1)
+        {{- end}}
+        {{- if .use_zap_logger}}
+        logger.Error("stop app", zap.Error(err))
+        {{- end}}
+	}
+	wg.Wait()
+}

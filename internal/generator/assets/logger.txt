@@ -1,0 +1,39 @@
+package logger
+
+{{if .use_gokit_logger}}
+import (
+    "context"
+    kitlog "github.com/go-kit/kit/log"
+    "os"
+)
+
+func NewLogger() kitlog.Logger {
+    w := kitlog.NewSyncWriter(os.Stdout)
+    logger := kitlog.NewJSONLogger(w)
+    logger = kitlog.With(logger, "ts", kitlog.DefaultTimestampUTC, "caller", kitlog.DefaultCaller)
+    return logger
+}
+
+type loggerKey struct{}
+
+var key = loggerKey{}
+
+func FromContext(ctx context.Context) kitlog.Logger {
+    return ctx.Value(key).(kitlog.Logger)
+}
+
+func IntoContext(ctx context.Context, l kitlog.Logger) context.Context {
+    return context.WithValue(ctx, key, l)
+}
+{{- else}}
+import 	"go.uber.org/zap"
+
+func NewLogger() *zap.Logger {
+    zapLogger, err := zap.NewProduction()
+    if err != nil {
+        panic(err)
+    }
+
+    return zapLogger
+}
+{{end}}

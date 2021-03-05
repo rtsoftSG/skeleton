@@ -1,0 +1,69 @@
+package config
+
+import (
+	"fmt"
+	"github.com/spf13/viper"
+	"strings"
+)
+
+type Configuration struct {
+    {{ if .use_clickhouse -}}
+	Ch struct {
+		DSN string
+	}
+    {{- end}}
+    {{- if .use_postgresql -}}
+    Postgres struct {
+        DSN string
+    }
+    {{- end}}
+    {{ if .use_jaeger -}}
+	Jaeger struct {
+		AgentAddr   string `mapstructure:"agent_addr"`
+		ServiceName string `mapstructure:"service_name"`
+	}
+	{{- end}}
+	{{ if .use_consul -}}
+	Consul struct {
+    	Addr          string
+    	AgentAddr     string `mapstructure:"agent_addr"`
+    	ServiceID     string `mapstructure:"service_id"`
+    	ServiceName   string `mapstructure:"service_name"`
+    }
+	{{- end}}
+}
+
+func LoadConfig(name string) (*Configuration, error) {
+	v := viper.New()
+	v.SetConfigName(name)
+	v.AddConfigPath("./configs/")
+
+	var cfg Configuration
+
+	if err := v.ReadInConfig(); err != nil {
+		return nil, fmt.Errorf("error reading config file, %w", err)
+	}
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
+
+	err := v.Unmarshal(&cfg)
+	if err != nil {
+		return nil, fmt.Errorf("unable to decode into struct, %w", err)
+	}
+    {{ if .use_consul_for_configuration }}
+	vConsul := viper.New()
+	if err = vConsul.AddRemoteProvider("consul", cfg.Consul.Addr, "{{.module}}/config"); err != nil {
+		return nil, fmt.Errorf("error adding remote configuration, %w", err)
+	}
+	vConsul.SetConfigType("yaml")
+
+	if err = vConsul.ReadRemoteConfig(); err != nil {
+		return nil, fmt.Errorf("error reading remote configuration, %w", err)
+	}
+
+	if err = vConsul.Unmarshal(&cfg); err != nil {
+		return nil, fmt.Errorf("unable to decode into struct, %w", err)
+	}
+    {{end}}
+	return &cfg, nil
+}

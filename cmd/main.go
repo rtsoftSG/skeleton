@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"github.com/dixonwille/wlog/v3"
 	"github.com/dixonwille/wmenu/v5"
 	"github.com/rtsoftSG/skeleton/internal/generator"
@@ -20,6 +19,9 @@ func main() {
 	if err := runChooseJaegerMenu(&generatorSettings); err != nil {
 		log.Fatal(err)
 	}
+	if err := runChoosePrometheusMenu(&generatorSettings); err != nil {
+		log.Fatal(err)
+	}
 	if err := runChooseLoggerMenu(&generatorSettings); err != nil {
 		log.Fatal(err)
 	}
@@ -27,17 +29,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println(generatorSettings)
-
 	if err := generator.Run(&generatorSettings); err != nil {
 		log.Fatal(err)
 	}
-
 }
 
 func runChooseConsulMenu(s *generator.Settings) error {
-	defer fmt.Print("\n")
-
 	consulMenu := wmenu.NewMenu("Use consul?")
 	consulMenu.IsYesNo(wmenu.DefY)
 	consulMenu.AddColor(wlog.None, wlog.BrightGreen, wlog.None, wlog.Red)
@@ -63,8 +60,6 @@ func runChooseConsulMenu(s *generator.Settings) error {
 }
 
 func runChooseJaegerMenu(s *generator.Settings) error {
-	defer fmt.Print("\n")
-
 	jaegerMenu := wmenu.NewMenu("Use jaeger tracer?")
 	jaegerMenu.IsYesNo(wmenu.DefY)
 	jaegerMenu.AddColor(wlog.None, wlog.BrightGreen, wlog.None, wlog.Red)
@@ -77,9 +72,20 @@ func runChooseJaegerMenu(s *generator.Settings) error {
 	return jaegerMenu.Run()
 }
 
-func runChooseLoggerMenu(s *generator.Settings) error {
-	defer fmt.Print("\n")
+func runChoosePrometheusMenu(s *generator.Settings) error {
+	prometheusMenu := wmenu.NewMenu("Use prometheus?")
+	prometheusMenu.IsYesNo(wmenu.DefY)
+	prometheusMenu.AddColor(wlog.None, wlog.BrightGreen, wlog.None, wlog.Red)
 
+	prometheusMenu.Action(func(opts []wmenu.Opt) error {
+		s.UsePrometheus = opts[0].Value.(string) == "yes"
+		return nil
+	})
+
+	return prometheusMenu.Run()
+}
+
+func runChooseLoggerMenu(s *generator.Settings) error {
 	loggerMenu := wmenu.NewMenu("Choose logger")
 
 	loggerMenu.LoopOnInvalid()
@@ -96,8 +102,6 @@ func runChooseLoggerMenu(s *generator.Settings) error {
 }
 
 func runChooseDBMenu(s *generator.Settings) error {
-	defer fmt.Print("\n")
-
 	dbMenu := wmenu.NewMenu("Choose database")
 
 	dbMenu.LoopOnInvalid()

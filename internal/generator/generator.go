@@ -55,6 +55,20 @@ func Run(settings *Settings) error {
 		return err
 	}
 
+	if err := executeTplIntoFile(g.writeEndpoints, path.Join(rootDir, "internal/endpoint/endpoints.go")); err != nil {
+		return err
+	}
+	if err := executeTplIntoFile(g.writeEndpointsMiddlewares, path.Join(rootDir, "internal/endpoint/middleware.go")); err != nil {
+		return err
+	}
+	if err := executeTplIntoFile(g.writeEndpointsResponseRequest, path.Join(rootDir, "internal/endpoint/request.go")); err != nil {
+		return err
+	}
+
+	if err := executeTplIntoFile(g.writeHttpServer, path.Join(rootDir, "internal/transport/http/server.go")); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -100,6 +114,11 @@ func (g *generator) createDirectoryLayout() error {
 	}
 
 	err = os.Mkdir(path.Join(g.settings.ProjectRootDir, "internal/config"), 0755)
+	if err != nil && !os.IsExist(err) {
+		return err
+	}
+
+	err = os.Mkdir(path.Join(g.settings.ProjectRootDir, "internal/endpoint"), 0755)
 	if err != nil && !os.IsExist(err) {
 		return err
 	}
@@ -216,5 +235,58 @@ func (g *generator) writeApp(w io.Writer) error {
 		"use_consul":       g.settings.UseConsul,
 		"use_gokit_logger": g.settings.Logger == GoKit,
 		"use_zap_logger":   g.settings.Logger == Zap,
+	})
+}
+
+func (g *generator) writeEndpoints(w io.Writer) error {
+	tpl, err := template.New("endpoint").ParseFS(templates, "assets/endpoint")
+	if err != nil {
+		return err
+	}
+
+	return tpl.Execute(w, map[string]interface{}{
+		"use_jaeger": g.settings.UseJaeger,
+	})
+}
+
+func (g *generator) writeEndpointsMiddlewares(w io.Writer) error {
+	tpl, err := template.New("endpoint_middleware").ParseFS(templates, "assets/endpoint_middleware")
+	if err != nil {
+		return err
+	}
+
+	return tpl.Execute(w, map[string]interface{}{
+		"module":           g.settings.ProjectName,
+		"use_jaeger":       g.settings.UseJaeger,
+		"use_consul":       g.settings.UseConsul,
+		"use_gokit_logger": g.settings.Logger == GoKit,
+		"use_zap_logger":   g.settings.Logger == Zap,
+	})
+}
+
+func (g *generator) writeEndpointsResponseRequest(w io.Writer) error {
+	tpl, err := template.New("endpoint_req_resp").ParseFS(templates, "assets/endpoint_req_resp")
+	if err != nil {
+		return err
+	}
+
+	return tpl.Execute(w, map[string]interface{}{})
+}
+
+func (g *generator) writeHttpServer(w io.Writer) error {
+	tpl, err := template.New("http_server_gorilla").ParseFS(templates, "assets/http_server_gorilla")
+	if err != nil {
+		return err
+	}
+
+	return tpl.Execute(w, map[string]interface{}{
+		"module":           g.settings.ProjectName,
+		"use_clickhouse":   g.settings.Database == Clickhouse,
+		"use_postgresql":   g.settings.Database == Postgresql,
+		"use_jaeger":       g.settings.UseJaeger,
+		"use_consul":       g.settings.UseConsul,
+		"use_gokit_logger": g.settings.Logger == GoKit,
+		"use_zap_logger":   g.settings.Logger == Zap,
+		"use_prometheus":   g.settings.UsePrometheus,
 	})
 }

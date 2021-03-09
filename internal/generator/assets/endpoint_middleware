@@ -1,0 +1,39 @@
+package endpoint
+
+import (
+	"context"
+	"{{.module}}/internal/infrastructure/logger"
+	"github.com/go-kit/kit/endpoint"
+	{{- if .use_gokit_logger }}
+	"github.com/go-kit/kit/log"
+	{{- end }}
+	{{- if .use_zap_logger }}
+    "go.uber.org/zap"
+	{{- end }}
+	{{- if .use_jaeger }}
+    "github.com/opentracing/opentracing-go"
+    "github.com/uber/jaeger-client-go"
+	{{- end }}
+)
+
+{{- if .use_jaeger }}
+
+func TraceLoggerMiddleware() endpoint.Middleware {
+	return func(next endpoint.Endpoint) endpoint.Endpoint {
+		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
+			span := opentracing.SpanFromContext(ctx)
+			if span != nil {
+				l := logger.FromContext(ctx)
+				{{- if .use_gokit_logger }}
+				ctx = logger.IntoContext(ctx, log.With(l, "trace_id", span.Context().(jaeger.SpanContext).TraceID().String()))
+				{{- end }}
+				{{- if .use_zap_logger }}
+				ctx = logger.IntoContext(ctx, l.With(zap.String("trace_id", span.Context().(jaeger.SpanContext).TraceID().String())))
+				{{- end }}
+			}
+
+			return next(ctx, request)
+		}
+	}
+}
+{{- end }}

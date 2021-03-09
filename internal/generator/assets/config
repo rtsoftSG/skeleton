@@ -3,6 +3,9 @@ package config
 import (
 	"fmt"
 	"github.com/spf13/viper"
+	{{- if .use_consul_for_configuration }}
+	_ "github.com/spf13/viper/remote"
+	{{- end }}
 	"strings"
 )
 

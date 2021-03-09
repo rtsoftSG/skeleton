@@ -1,0 +1,34 @@
+package endpoint
+
+import (
+	"context"
+	"github.com/go-kit/kit/endpoint"
+)
+
+type Endpoints struct {
+	TodoEndpoint endpoint.Endpoint
+}
+
+func NewEndpoints() Endpoints {
+	var (
+	    {{- if .use_jaeger}}
+	    todoEndpoint = TraceLoggerMiddleware()(MakeTodoEndpoint())
+	    {{- else}}
+	    todoEndpoint = MakeTodoEndpoint()
+	    {{- end }}
+	)
+
+	endpoints := Endpoints{
+		TodoEndpoint: todoEndpoint,
+	}
+
+	return endpoints
+}
+
+func MakeTodoEndpoint() endpoint.Endpoint {
+	return func(_ context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(TodoRequest)
+		req = req
+		return TodoResponse{}, nil
+	}
+}

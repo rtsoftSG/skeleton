@@ -1,0 +1,5 @@
+package endpoint
+
+type TodoRequest struct {}
+
+type TodoResponse struct {}

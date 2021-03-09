@@ -36,4 +36,16 @@ func NewLogger() *zap.Logger {
 
     return zapLogger
 }
+
+type loggerKey struct{}
+
+var key = loggerKey{}
+
+func FromContext(ctx context.Context) *zap.Logger {
+    return ctx.Value(key).(*zap.Logger)
+}
+
+func IntoContext(ctx context.Context, l *zap.Logger) context.Context {
+    return context.WithValue(ctx, key, l)
+}
 {{end}}

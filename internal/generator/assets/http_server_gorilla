@@ -1,0 +1,121 @@
+package http
+
+import (
+	"context"
+	"encoding/json"
+	"github.com/go-kit/kit/log"
+	{{- if .use_zap_logger}}
+    "go.uber.org/zap"
+    {{- end}}
+    {{- if .use_jaeger}}
+	kitopentracing "github.com/go-kit/kit/tracing/opentracing"
+	"github.com/opentracing/opentracing-go"
+    {{- end}}
+    {{- if .use_prometheus }}
+    "github.com/prometheus/client_golang/prometheus/promhttp"
+    {{- end}}
+    "{{.module}}/internal/infrastructure/logger"
+    "{{.module}}/internal/endpoint"
+	"github.com/go-kit/kit/transport"
+	httptransport "github.com/go-kit/kit/transport/http"
+	"github.com/gorilla/mux"
+
+	"net/http"
+)
+
+{{- if .use_gokit_logger}}
+
+func NewServer(endpoints endpoint.Endpoints, l log.Logger) *http.Server {
+{{- end }}
+{{- if .use_zap_logger}}
+
+func NewServer(endpoints endpoint.Endpoints, l *zap.Logger) *http.Server {
+{{- end }}
+	opts := []httptransport.ServerOption{
+		{{- if .use_gokit_logger}}
+		httptransport.ServerErrorHandler(transport.NewLogErrorHandler(l)),
+		{{- end }}
+		{{- if .use_zap_logger}}
+		httptransport.ServerErrorHandler(logErrorHandler(l)),
+		{{- end }}
+		httptransport.ServerErrorEncoder(encodeError),
+		httptransport.ServerBefore(
+		    {{- if .use_jaeger}}
+			kitopentracing.HTTPToContext(opentracing.GlobalTracer(), "{{.module}}", log.NewNopLogger()),
+			{{- end }}
+            func(ctx context.Context, request *http.Request) context.Context {
+                return logger.IntoContext(ctx, l)
+            },
+		),
+	}
+
+    // todo write your own endpoints and handlers
+	todoHandler := httptransport.NewServer(
+	    {{- if .use_jaeger}}
+		kitopentracing.TraceServer(opentracing.GlobalTracer(), "{{.module}}")(endpoints.TodoEndpoint),
+		{{- else }}
+		endpoints.TodoEndpoint,
+		{{- end }}
+		decodeTodoRequest,
+		encodeTodoResponse,
+		opts...,
+	)
+
+	r := mux.NewRouter()
+	r.Methods("GET").Path("/todo").Handler(todoHandler)
+    {{- if .use_consul}}
+
+    r.Methods("GET").Path("/health-check").HandlerFunc(
+        func(writer http.ResponseWriter, request *http.Request) {
+            writer.WriteHeader(200)
+            writer.Write([]byte("{}"))
+        },
+    )
+    {{- end}}
+    {{- if .use_prometheus }}
+
+   	r.Handle("/metrics", promhttp.Handler())
+    {{- end}}
+
+	return &http.Server{
+        Addr:    ":8080",
+		Handler: r,
+	}
+}
+
+func decodeTodoRequest(_ context.Context, _ *http.Request) (interface{}, error) {
+	return endpoint.TodoRequest{}, nil
+}
+
+func encodeTodoResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+	return json.NewEncoder(w).Encode(response)
+}
+
+func encodeError(_ context.Context, err error, w http.ResponseWriter) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(http.StatusInternalServerError)
+
+	switch {
+	// todo add your error handling rules
+	default:
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"error": "internal error",
+		})
+	}
+}
+
+{{- if .use_zap_logger}}
+type logErrorHandler struct {
+	logger *zap.Logger
+}
+
+func newLogErrorHandler(logger *zap.Logger) *logErrorHandler {
+	return &LogErrorHandler{
+		logger: logger,
+	}
+}
+
+func (h *logErrorHandler) Handle(ctx context.Context, err error) {
+	h.logger.Error("err", zap.Error(err))
+}
+{{- end}}

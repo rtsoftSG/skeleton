@@ -6,7 +6,7 @@ ch:
 {{- if .use_postgresql -}}
 postgres:
 # todo set postgresql dsn
-  dsn: "postgres://postgres:postgres@0.0.0.0:5432/d3db?sslmode=disable"
+  dsn: "postgres://postgres:postgres@0.0.0.0:5432/some-db"
 # todo set postgresql connection pool max connections
   pool_max_conns: 10
 {{ end }}
@@ -21,8 +21,8 @@ consul:
 # todo set consul address
   addr: "localhost:8500"
 # todo set consul agent address
-  agent_addr: "localhost:7171"
+  agent_addr: "localhost:8080"
 # todo set service id in consul
-  service_id: "tg-service"
+  service_id: ""
   service_name: "{{.module}}"
 {{ end }}

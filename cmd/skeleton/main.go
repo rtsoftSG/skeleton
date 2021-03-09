@@ -1,37 +1,75 @@
 package main
 
 import (
+	"fmt"
 	"github.com/dixonwille/wlog/v3"
 	"github.com/dixonwille/wmenu/v5"
 	"github.com/rtsoftSG/skeleton/internal/generator"
+	"github.com/urfave/cli/v2"
 	"log"
+	"os"
 )
 
 func main() {
 	var generatorSettings generator.Settings
 
-	generatorSettings.ProjectRootDir = "/home/kostya/go/src/skeleton/test"
-	generatorSettings.ProjectName = "ptest"
+	app := &cli.App{
+		Name:                 "skeleton",
+		Usage:                "A-PLATFORM microservice skeleton generator",
+		EnableBashCompletion: true,
+		Commands: []*cli.Command{
+			{
+				Name:    "generate",
+				Aliases: []string{"g"},
+				Usage:   "generate skeleton code",
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name:     "directory",
+						Aliases:  []string{"d"},
+						Usage:    "`PATH` to directory where the new application will be created",
+						Required: true,
+					},
+					&cli.StringFlag{
+						Name:     "name",
+						Aliases:  []string{"n"},
+						Usage:    "application `NAME`",
+						Required: true,
+					},
+				},
+				Action: func(c *cli.Context) error {
+					generatorSettings.ProjectRootDir = c.String("directory")
+					if _, err := os.Stat(generatorSettings.ProjectRootDir); os.IsNotExist(err) {
+						return fmt.Errorf("directory %s not exists", generatorSettings.ProjectRootDir)
+					}
+					generatorSettings.ProjectName = c.String("name")
 
-	if err := runChooseConsulMenu(&generatorSettings); err != nil {
-		log.Fatal(err)
+					if err := runChooseConsulMenu(&generatorSettings); err != nil {
+						return err
+					}
+					if err := runChooseJaegerMenu(&generatorSettings); err != nil {
+						return err
+					}
+					if err := runChoosePrometheusMenu(&generatorSettings); err != nil {
+						return err
+					}
+					if err := runChooseLoggerMenu(&generatorSettings); err != nil {
+						return err
+					}
+					if err := runChooseDBMenu(&generatorSettings); err != nil {
+						return err
+					}
+
+					return generator.Run(&generatorSettings)
+				},
+			},
+		},
 	}
-	if err := runChooseJaegerMenu(&generatorSettings); err != nil {
-		log.Fatal(err)
-	}
-	if err := runChoosePrometheusMenu(&generatorSettings); err != nil {
-		log.Fatal(err)
-	}
-	if err := runChooseLoggerMenu(&generatorSettings); err != nil {
-		log.Fatal(err)
-	}
-	if err := runChooseDBMenu(&generatorSettings); err != nil {
+
+	err := app.Run(os.Args)
+	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := generator.Run(&generatorSettings); err != nil {
-		log.Fatal(err)
-	}
 }
 
 func runChooseConsulMenu(s *generator.Settings) error {

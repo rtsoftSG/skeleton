@@ -128,7 +128,7 @@ func (g *generator) createDirectoryLayout() error {
 }
 
 func (g *generator) writeGoMod(w io.Writer) error {
-	tpl, err := template.New("gomod.txt").ParseFS(templates, "assets/gomod.txt")
+	tpl, err := template.New("gomod").ParseFS(templates, "assets/gomod")
 
 	if err != nil {
 		return err
@@ -138,7 +138,7 @@ func (g *generator) writeGoMod(w io.Writer) error {
 }
 
 func (g *generator) writeMain(w io.Writer) error {
-	tpl, err := template.New("main.txt").ParseFS(templates, "assets/main.txt")
+	tpl, err := template.New("main").ParseFS(templates, "assets/main")
 	if err != nil {
 		return err
 	}
@@ -151,7 +151,7 @@ func (g *generator) writeMain(w io.Writer) error {
 }
 
 func (g *generator) writeLogger(w io.Writer) error {
-	tpl, err := template.New("logger.txt").ParseFS(templates, "assets/logger.txt")
+	tpl, err := template.New("logger").ParseFS(templates, "assets/logger")
 	if err != nil {
 		return err
 	}
@@ -163,7 +163,7 @@ func (g *generator) writeLogger(w io.Writer) error {
 }
 
 func (g *generator) writeConfig(w io.Writer) error {
-	tpl, err := template.New("config.txt").ParseFS(templates, "assets/config.txt")
+	tpl, err := template.New("config").ParseFS(templates, "assets/config")
 	if err != nil {
 		return err
 	}
@@ -179,7 +179,7 @@ func (g *generator) writeConfig(w io.Writer) error {
 }
 
 func (g *generator) writeConfigYml(w io.Writer) error {
-	tpl, err := template.New("config_yml.txt").ParseFS(templates, "assets/config_yml.txt")
+	tpl, err := template.New("config_yml").ParseFS(templates, "assets/config_yml")
 	if err != nil {
 		return err
 	}
@@ -194,7 +194,7 @@ func (g *generator) writeConfigYml(w io.Writer) error {
 }
 
 func (g *generator) writeTracer(w io.Writer) error {
-	tpl, err := template.New("tracer.txt").ParseFS(templates, "assets/tracer.txt")
+	tpl, err := template.New("tracer").ParseFS(templates, "assets/tracer")
 	if err != nil {
 		return err
 	}

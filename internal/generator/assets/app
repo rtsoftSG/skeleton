@@ -19,7 +19,7 @@ import (
 	"database/sql"
     _ "github.com/ClickHouse/clickhouse-go"
 {{- end}}
-{{- if .use_postgres}}
+{{- if .use_postgresql}}
 	"github.com/jackc/pgx/v4/pgxpool"
 {{- end}}
 
@@ -107,9 +107,9 @@ func (a *App) Run(ctx context.Context) (err error) {
         return fmt.Errorf("clickhouse ping: %w", err)
     }
     {{- end}}
-    {{- if .use_postgres}}
+    {{- if .use_postgresql}}
 
-    pool, err := pgxpool.Connect(ctx, fmt.Sprintf("%s pool_max_conns=%d", a.cfg.postgres.DSN, a.cfg.postgres.MaxPoolConnections))
+    pool, err := pgxpool.Connect(ctx, fmt.Sprintf("%s pool_max_conns=%d", a.cfg.Postgres.DSN, a.cfg.Postgres.MaxPoolConnections))
     if err != nil {
         return fmt.Errorf("postgres ping: %w", err)
     }
@@ -130,8 +130,12 @@ func (a *App) Run(ctx context.Context) (err error) {
     }
     defer func() {
         if err = a.deregisterInConsul(consulClient); err != nil {
-            {{if .use_gokit_logger}}level.Error(a.logger).Log("deregister app in consul", err){{end}}
-            {{if .use_zap_logger}}a.logger.Error("deregister app in consul", zap.Error(err)){{- end}}
+            {{- if .use_gokit_logger}}
+            level.Error(a.logger).Log("deregister app in consul", err)
+            {{- end}}
+            {{- if .use_zap_logger}}
+            a.logger.Error("deregister app in consul", zap.Error(err))
+            {{- end}}
         }
     }()
     {{- end}}

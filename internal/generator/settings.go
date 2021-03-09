@@ -24,4 +24,6 @@ type Settings struct {
 	SyncConfigWithConsul bool
 	UseJaeger            bool
 	UsePrometheus        bool
+
+	WithDeps bool
 }

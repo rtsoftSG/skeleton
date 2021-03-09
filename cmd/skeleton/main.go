@@ -35,6 +35,12 @@ func main() {
 						Usage:    "application `NAME`",
 						Required: true,
 					},
+					&cli.BoolFlag{
+						Name:    "with-dependencies",
+						Aliases: []string{"wd"},
+						Usage:   "download service dependencies in vendor directory",
+						Value:   true,
+					},
 				},
 				Action: func(c *cli.Context) error {
 					generatorSettings.ProjectRootDir = c.String("directory")
@@ -42,6 +48,7 @@ func main() {
 						return fmt.Errorf("directory %s not exists", generatorSettings.ProjectRootDir)
 					}
 					generatorSettings.ProjectName = c.String("name")
+					generatorSettings.WithDeps = c.Bool("with-dependencies")
 
 					if err := runChooseConsulMenu(&generatorSettings); err != nil {
 						return err

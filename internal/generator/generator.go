@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"path"
 	"text/template"
 )
@@ -81,6 +82,15 @@ func Run(settings *Settings) error {
 	log.Print("create transport/http package ...")
 	if err := execTplAndFormat(g.writeHttpServer, path.Join(rootDir, "internal/transport/http/server.go")); err != nil {
 		return err
+	}
+
+	if settings.WithDeps {
+		log.Print("download dependencies ...")
+		cmd := exec.Command("go", "mod", "vendor")
+		cmd.Dir = rootDir
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("go mod vendor command: %w", err)
+		}
 	}
 
 	return nil

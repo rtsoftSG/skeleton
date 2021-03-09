@@ -15,6 +15,7 @@ type Configuration struct {
     {{- if .use_postgresql -}}
     Postgres struct {
         DSN string
+        MaxPoolConnections int `mapstructure:"pool_max_conns"`
     }
     {{- end}}
     {{ if .use_jaeger -}}

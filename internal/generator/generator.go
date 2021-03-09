@@ -51,6 +51,10 @@ func Run(settings *Settings) error {
 		}
 	}
 
+	if err := executeTplIntoFile(g.writeApp, path.Join(rootDir, "internal/app.go")); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -101,6 +105,11 @@ func (g *generator) createDirectoryLayout() error {
 	}
 
 	err = os.Mkdir(path.Join(g.settings.ProjectRootDir, "internal/transport"), 0755)
+	if err != nil && !os.IsExist(err) {
+		return err
+	}
+
+	err = os.Mkdir(path.Join(g.settings.ProjectRootDir, "internal/transport/http"), 0755)
 	if err != nil && !os.IsExist(err) {
 		return err
 	}
@@ -191,4 +200,21 @@ func (g *generator) writeTracer(w io.Writer) error {
 	}
 
 	return tpl.Execute(w, map[string]interface{}{})
+}
+
+func (g *generator) writeApp(w io.Writer) error {
+	tpl, err := template.New("app").ParseFS(templates, "assets/app")
+	if err != nil {
+		return err
+	}
+
+	return tpl.Execute(w, map[string]interface{}{
+		"module":           g.settings.ProjectName,
+		"use_clickhouse":   g.settings.Database == Clickhouse,
+		"use_postgresql":   g.settings.Database == Postgresql,
+		"use_jaeger":       g.settings.UseJaeger,
+		"use_consul":       g.settings.UseConsul,
+		"use_gokit_logger": g.settings.Logger == GoKit,
+		"use_zap_logger":   g.settings.Logger == Zap,
+	})
 }

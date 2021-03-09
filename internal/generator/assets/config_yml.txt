@@ -7,6 +7,8 @@ ch:
 postgres:
 # todo set postgresql dsn
   dsn: "postgres://postgres:postgres@0.0.0.0:5432/d3db?sslmode=disable"
+# todo set postgresql connection pool max connections
+  pool_max_conns: 10
 {{ end }}
 {{- if .use_jaeger -}}
 jaeger:

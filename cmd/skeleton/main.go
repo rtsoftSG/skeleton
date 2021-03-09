@@ -82,7 +82,7 @@ func main() {
 func runChooseConsulMenu(s *generator.Settings) error {
 	consulMenu := wmenu.NewMenu("Use consul?")
 	consulMenu.IsYesNo(wmenu.DefY)
-	consulMenu.AddColor(wlog.None, wlog.BrightGreen, wlog.None, wlog.Red)
+	consulMenu.AddColor(wlog.BrightGreen, wlog.BrightYellow, wlog.None, wlog.Red)
 
 	consulMenu.Action(func(opts []wmenu.Opt) error {
 		s.UseConsul = opts[0].Value.(string) == "yes"
@@ -90,7 +90,7 @@ func runChooseConsulMenu(s *generator.Settings) error {
 		if s.UseConsul {
 			m := wmenu.NewMenu("Sync config with consul?")
 			m.IsYesNo(wmenu.DefY)
-			m.AddColor(wlog.None, wlog.BrightGreen, wlog.None, wlog.Red)
+			consulMenu.AddColor(wlog.BrightGreen, wlog.BrightYellow, wlog.None, wlog.Red)
 			m.Action(func(opts []wmenu.Opt) error {
 				s.SyncConfigWithConsul = opts[0].Value.(string) == "yes"
 				return nil
@@ -107,7 +107,7 @@ func runChooseConsulMenu(s *generator.Settings) error {
 func runChooseJaegerMenu(s *generator.Settings) error {
 	jaegerMenu := wmenu.NewMenu("Use jaeger tracer?")
 	jaegerMenu.IsYesNo(wmenu.DefY)
-	jaegerMenu.AddColor(wlog.None, wlog.BrightGreen, wlog.None, wlog.Red)
+	jaegerMenu.AddColor(wlog.BrightGreen, wlog.BrightYellow, wlog.None, wlog.Red)
 
 	jaegerMenu.Action(func(opts []wmenu.Opt) error {
 		s.UseJaeger = opts[0].Value.(string) == "yes"
@@ -120,7 +120,7 @@ func runChooseJaegerMenu(s *generator.Settings) error {
 func runChoosePrometheusMenu(s *generator.Settings) error {
 	prometheusMenu := wmenu.NewMenu("Use prometheus?")
 	prometheusMenu.IsYesNo(wmenu.DefY)
-	prometheusMenu.AddColor(wlog.None, wlog.BrightGreen, wlog.None, wlog.Red)
+	prometheusMenu.AddColor(wlog.BrightGreen, wlog.BrightYellow, wlog.None, wlog.Red)
 
 	prometheusMenu.Action(func(opts []wmenu.Opt) error {
 		s.UsePrometheus = opts[0].Value.(string) == "yes"
@@ -134,7 +134,7 @@ func runChooseLoggerMenu(s *generator.Settings) error {
 	loggerMenu := wmenu.NewMenu("Choose logger")
 
 	loggerMenu.LoopOnInvalid()
-	loggerMenu.AddColor(wlog.None, wlog.BrightGreen, wlog.None, wlog.Red)
+	loggerMenu.AddColor(wlog.BrightGreen, wlog.BrightYellow, wlog.None, wlog.Red)
 
 	loggerMenu.Action(func(opts []wmenu.Opt) error {
 		s.Logger = opts[0].Value.(generator.LoggerChoice)
@@ -150,7 +150,7 @@ func runChooseDBMenu(s *generator.Settings) error {
 	dbMenu := wmenu.NewMenu("Choose database")
 
 	dbMenu.LoopOnInvalid()
-	dbMenu.AddColor(wlog.None, wlog.BrightGreen, wlog.None, wlog.Red)
+	dbMenu.AddColor(wlog.BrightGreen, wlog.BrightYellow, wlog.None, wlog.Red)
 
 	dbMenu.Action(func(opts []wmenu.Opt) error {
 		s.Database = opts[0].Value.(generator.DBChoice)

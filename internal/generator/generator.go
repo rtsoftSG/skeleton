@@ -3,7 +3,10 @@ package generator
 import (
 	"bytes"
 	"embed"
+	"fmt"
+	"go/format"
 	"io"
+	"log"
 	"os"
 	"path"
 	"text/template"
@@ -19,65 +22,91 @@ type generator struct {
 
 func Run(settings *Settings) error {
 	g := generator{settings: settings}
+
+	log.Print("create directories ...")
 	if err := g.createDirectoryLayout(); err != nil {
 		return err
 	}
 
 	rootDir := g.settings.ProjectRootDir
 
-	if err := executeTplIntoFile(g.writeGoMod, path.Join(rootDir, "go.mod")); err != nil {
+	log.Print("create go.mod file ...")
+	if err := execTpl(g.writeGoMod, path.Join(rootDir, "go.mod")); err != nil {
 		return err
 	}
 
-	if err := executeTplIntoFile(g.writeMain, path.Join(rootDir, "cmd", g.settings.ProjectName, "main.go")); err != nil {
+	log.Print("create main.go ...")
+	if err := execTplAndFormat(g.writeMain, path.Join(rootDir, "cmd", g.settings.ProjectName, "main.go")); err != nil {
 		return err
 	}
 
-	if err := executeTplIntoFile(g.writeLogger, path.Join(rootDir, "internal/infrastructure/logger/logger.go")); err != nil {
+	log.Print("create config package ...")
+	if err := execTplAndFormat(g.writeConfig, path.Join(rootDir, "internal/config/config.go")); err != nil {
 		return err
 	}
 
-	if err := executeTplIntoFile(g.writeConfig, path.Join(rootDir, "internal/config/config.go")); err != nil {
+	log.Print("create config.yml example ...")
+	if err := execTpl(g.writeConfigYml, path.Join(rootDir, "configs/config.yml")); err != nil {
 		return err
 	}
 
-	if err := executeTplIntoFile(g.writeConfigYml, path.Join(rootDir, "configs/config.yml")); err != nil {
+	log.Print("create infrastructure/logger package ...")
+	if err := execTplAndFormat(g.writeLogger, path.Join(rootDir, "internal/infrastructure/logger/logger.go")); err != nil {
 		return err
 	}
 
 	if settings.UseJaeger {
-		if err := executeTplIntoFile(g.writeTracer, path.Join(rootDir, "internal/infrastructure/tracer/jaeger.go")); err != nil {
+		log.Print("create infrastructure/tracer package ...")
+		if err := execTplAndFormat(g.writeTracer, path.Join(rootDir, "internal/infrastructure/tracer/jaeger.go")); err != nil {
 			return err
 		}
 	}
 
-	if err := executeTplIntoFile(g.writeApp, path.Join(rootDir, "internal/app.go")); err != nil {
+	log.Print("create app.go ...")
+	if err := execTplAndFormat(g.writeApp, path.Join(rootDir, "internal/app.go")); err != nil {
 		return err
 	}
 
-	if err := executeTplIntoFile(g.writeEndpoints, path.Join(rootDir, "internal/endpoint/endpoints.go")); err != nil {
+	log.Print("create endpoint package ...")
+	if err := execTplAndFormat(g.writeEndpoints, path.Join(rootDir, "internal/endpoint/endpoints.go")); err != nil {
 		return err
 	}
-	if err := executeTplIntoFile(g.writeEndpointsMiddlewares, path.Join(rootDir, "internal/endpoint/middleware.go")); err != nil {
+	if err := execTplAndFormat(g.writeEndpointsMiddlewares, path.Join(rootDir, "internal/endpoint/middleware.go")); err != nil {
 		return err
 	}
-	if err := executeTplIntoFile(g.writeEndpointsResponseRequest, path.Join(rootDir, "internal/endpoint/request.go")); err != nil {
+	if err := execTplAndFormat(g.writeEndpointsResponseRequest, path.Join(rootDir, "internal/endpoint/request.go")); err != nil {
 		return err
 	}
 
-	if err := executeTplIntoFile(g.writeHttpServer, path.Join(rootDir, "internal/transport/http/server.go")); err != nil {
+	log.Print("create transport/http package ...")
+	if err := execTplAndFormat(g.writeHttpServer, path.Join(rootDir, "internal/transport/http/server.go")); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func executeTplIntoFile(executor func(w io.Writer) error, filePath string) error {
+func execTpl(executor func(w io.Writer) error, filePath string) error {
 	buff := &bytes.Buffer{}
 	if err := executor(buff); err != nil {
-		return err
+		return fmt.Errorf("on exec template: %w, file: %s", err, filePath)
 	}
+
 	return os.WriteFile(filePath, buff.Bytes(), 0644)
+}
+
+func execTplAndFormat(executor func(w io.Writer) error, filePath string) error {
+	buff := &bytes.Buffer{}
+	if err := executor(buff); err != nil {
+		return fmt.Errorf("on exec template: %w, file: %s", err, filePath)
+	}
+
+	source, err := format.Source(buff.Bytes())
+	if err != nil {
+		return fmt.Errorf("on format sources: %w, file: %s", err, filePath)
+	}
+
+	return os.WriteFile(filePath, source, 0644)
 }
 
 func (g *generator) createDirectoryLayout() error {

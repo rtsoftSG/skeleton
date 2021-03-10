@@ -10,6 +10,7 @@ import (
 	"time"
 {{- if .use_gokit_logger}}
 	kitlog "github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
 {{- end}}
 {{- if .use_zap_logger}}
     "go.uber.org/zap"
@@ -87,10 +88,12 @@ func (a *App) Run(ctx context.Context) (err error) {
         return fmt.Errorf("clickhouse: %w", err)
     }
     defer chConn.Close()
+    {{log "a.logger" "info" "open clickhouse connection"}}
 
     if err = chConn.Ping(); err != nil {
         return fmt.Errorf("clickhouse ping: %w", err)
     }
+    {{log "a.logger" "info" "successful ping of clickhouse database"}}
     {{- end}}
     {{- if .use_postgresql}}
 
@@ -99,14 +102,18 @@ func (a *App) Run(ctx context.Context) (err error) {
         return fmt.Errorf("postgres ping: %w", err)
     }
     defer pool.Close()
+
+    {{log "a.logger" "info" "open postgres connection"}}
     {{- end}}
 
 	a.httpSrv = httptransport.NewServer(endpoint.NewEndpoints(), a.logger)
+	{{log "a.logger" "info" "starting http server"}}
+
 	eg.Go(func() error {
 		if err = a.httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			return fmt.Errorf("http serve: %w", err)
 		}
-
+        {{log "a.logger" "info" "http server stopped"}}
 		return nil
 	})
 
@@ -115,6 +122,8 @@ func (a *App) Run(ctx context.Context) (err error) {
 
 // Stop stop application.
 func (a *App) Stop() error {
+    {{log "a.logger" "info" "stopping application"}}
+
 	ctx, cancel := context.WithTimeout(context.Background(), closeHttpTimeout)
 	defer cancel()
 

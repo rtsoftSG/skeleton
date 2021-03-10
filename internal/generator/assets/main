@@ -51,9 +51,12 @@ func main() {
         c := consul.New(consulClient)
         err = c.Register(cfg.Consul.AgentAddr, cfg.Consul.ServiceName, cfg.Consul.ServiceID)
         checkErr(err, logger)
+
+        {{log "logger" "info" "register application in consul"}}
         defer func() {
             err = c.Deregister(cfg.Consul.ServiceID)
             checkErr(err, logger)
+            {{log "logger" "info" "deregister application in consul"}}
         }()
     }
     {{- end }}
@@ -66,6 +69,7 @@ func main() {
             err = closer.Close()
             checkErr(err, logger)
         }()
+        {{log "logger" "info" "jaeger tracer initialized"}}
     }
     {{- end }}
 
@@ -76,7 +80,9 @@ func main() {
     wg.Add(1)
     go func() {
         defer wg.Done()
+        defer {{log "logger" "info" "application stopped"}}
 
+        {{log "logger" "info" "running application"}}
         err = app.Run(ctx)
         checkErr(err, logger)
     }()

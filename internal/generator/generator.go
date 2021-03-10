@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 	"text/template"
 )
 
@@ -209,9 +210,14 @@ func (g *generator) createDirectoryLayout() error {
 	return nil
 }
 
-func (g *generator) writeGoMod(w io.Writer) error {
-	tpl, err := template.New("gomod").ParseFS(templates, "assets/gomod")
+func (g *generator) createTemplate(fileName string) (*template.Template, error) {
+	return template.New(fileName).Funcs(template.FuncMap{
+		"log": makeLogFunc(g.settings.Logger),
+	}).ParseFS(templates, "assets/"+fileName)
+}
 
+func (g *generator) writeGoMod(w io.Writer) error {
+	tpl, err := g.createTemplate("gomod")
 	if err != nil {
 		return err
 	}
@@ -220,7 +226,7 @@ func (g *generator) writeGoMod(w io.Writer) error {
 }
 
 func (g *generator) writeMain(w io.Writer) error {
-	tpl, err := template.New("main").ParseFS(templates, "assets/main")
+	tpl, err := g.createTemplate("main")
 	if err != nil {
 		return err
 	}
@@ -235,7 +241,7 @@ func (g *generator) writeMain(w io.Writer) error {
 }
 
 func (g *generator) writeLogger(w io.Writer) error {
-	tpl, err := template.New("logger").ParseFS(templates, "assets/logger")
+	tpl, err := g.createTemplate("logger")
 	if err != nil {
 		return err
 	}
@@ -247,7 +253,7 @@ func (g *generator) writeLogger(w io.Writer) error {
 }
 
 func (g *generator) writeConfig(w io.Writer) error {
-	tpl, err := template.New("config").ParseFS(templates, "assets/config")
+	tpl, err := g.createTemplate("config")
 	if err != nil {
 		return err
 	}
@@ -263,7 +269,7 @@ func (g *generator) writeConfig(w io.Writer) error {
 }
 
 func (g *generator) writeConfigYml(w io.Writer) error {
-	tpl, err := template.New("config_yml").ParseFS(templates, "assets/config_yml")
+	tpl, err := g.createTemplate("config_yml")
 	if err != nil {
 		return err
 	}
@@ -278,7 +284,7 @@ func (g *generator) writeConfigYml(w io.Writer) error {
 }
 
 func (g *generator) writeTracer(w io.Writer) error {
-	tpl, err := template.New("tracer").ParseFS(templates, "assets/tracer")
+	tpl, err := g.createTemplate("tracer")
 	if err != nil {
 		return err
 	}
@@ -287,7 +293,7 @@ func (g *generator) writeTracer(w io.Writer) error {
 }
 
 func (g *generator) writeConsul(w io.Writer) error {
-	tpl, err := template.New("consul").ParseFS(templates, "assets/consul")
+	tpl, err := g.createTemplate("consul")
 	if err != nil {
 		return err
 	}
@@ -296,7 +302,7 @@ func (g *generator) writeConsul(w io.Writer) error {
 }
 
 func (g *generator) writeApp(w io.Writer) error {
-	tpl, err := template.New("app").ParseFS(templates, "assets/app")
+	tpl, err := g.createTemplate("app")
 	if err != nil {
 		return err
 	}
@@ -311,7 +317,7 @@ func (g *generator) writeApp(w io.Writer) error {
 }
 
 func (g *generator) writeEndpoints(w io.Writer) error {
-	tpl, err := template.New("endpoint").ParseFS(templates, "assets/endpoint")
+	tpl, err := g.createTemplate("endpoint")
 	if err != nil {
 		return err
 	}
@@ -322,7 +328,7 @@ func (g *generator) writeEndpoints(w io.Writer) error {
 }
 
 func (g *generator) writeEndpointsMiddlewares(w io.Writer) error {
-	tpl, err := template.New("endpoint_middleware").ParseFS(templates, "assets/endpoint_middleware")
+	tpl, err := g.createTemplate("endpoint_middleware")
 	if err != nil {
 		return err
 	}
@@ -337,7 +343,7 @@ func (g *generator) writeEndpointsMiddlewares(w io.Writer) error {
 }
 
 func (g *generator) writeEndpointsResponseRequest(w io.Writer) error {
-	tpl, err := template.New("endpoint_req_resp").ParseFS(templates, "assets/endpoint_req_resp")
+	tpl, err := g.createTemplate("endpoint_req_resp")
 	if err != nil {
 		return err
 	}
@@ -346,7 +352,7 @@ func (g *generator) writeEndpointsResponseRequest(w io.Writer) error {
 }
 
 func (g *generator) writeHttpServer(w io.Writer) error {
-	tpl, err := template.New("http_server").ParseFS(templates, "assets/http_server")
+	tpl, err := g.createTemplate("http_server")
 	if err != nil {
 		return err
 	}
@@ -366,7 +372,7 @@ func (g *generator) writeHttpServer(w io.Writer) error {
 }
 
 func (g *generator) writeTest(w io.Writer) error {
-	tpl, err := template.New("app_test").ParseFS(templates, "assets/app_test")
+	tpl, err := g.createTemplate("app_test")
 	if err != nil {
 		return err
 	}
@@ -374,4 +380,19 @@ func (g *generator) writeTest(w io.Writer) error {
 	return tpl.Execute(w, map[string]interface{}{
 		"module": g.settings.ProjectName,
 	})
+}
+
+func makeLogFunc(logger LoggerChoice) func(logger, lvl string, msg string) string {
+	switch logger {
+	case GoKit:
+		return func(logger, lvl, msg string) string {
+			return "level." + strings.Title(strings.ToLower(lvl)) + "(" + logger + ").Log(\"msg\", \"" + msg + "\")"
+		}
+	case Zap:
+		return func(logger, lvl, msg string) string {
+			return logger + "." + strings.Title(strings.ToLower(lvl)) + "(\"" + msg + "\")"
+		}
+	default:
+		panic("unknown logger " + logger)
+	}
 }

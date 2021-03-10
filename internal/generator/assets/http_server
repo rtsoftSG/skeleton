@@ -57,20 +57,20 @@ func NewServer(endpoints endpoint.Endpoints, l *zap.Logger) *http.Server {
 	}
 
     // todo write your own endpoints and handlers
-	todoHandler := httptransport.NewServer(
+	pingHandler := httptransport.NewServer(
 	    {{- if .use_jaeger}}
-		kitopentracing.TraceServer(opentracing.GlobalTracer(), "{{.module}}")(endpoints.TodoEndpoint),
+		kitopentracing.TraceServer(opentracing.GlobalTracer(), "{{.module}}")(endpoints.PingEndpoint),
 		{{- else }}
-		endpoints.TodoEndpoint,
+		endpoints.PingEndpoint,
 		{{- end }}
-		decodeTodoRequest,
-		encodeTodoResponse,
+		decodePingRequest,
+		encodePingResponse,
 		opts...,
 	)
 
     {{- if .use_gorilla }}
 	r := mux.NewRouter()
-	r.Methods("GET").Path("/todo").Handler(todoHandler)
+	r.Methods("GET").Path("/ping").Handler(pingHandler)
         {{- if .use_consul}}
 
     r.Methods("GET").Path("/health-check").HandlerFunc(
@@ -88,8 +88,8 @@ func NewServer(endpoints endpoint.Endpoints, l *zap.Logger) *http.Server {
     {{- if .use_gin }}
     r := gin.Default()
 
-    r.GET("/todo", func(c *gin.Context) {
-    	todoHandler.ServeHTTP(c.Writer, c.Request)
+    r.GET("/ping", func(c *gin.Context) {
+    	pingHandler.ServeHTTP(c.Writer, c.Request)
     })
         {{- if .use_consul}}
 
@@ -111,11 +111,11 @@ func NewServer(endpoints endpoint.Endpoints, l *zap.Logger) *http.Server {
 	}
 }
 
-func decodeTodoRequest(_ context.Context, _ *http.Request) (interface{}, error) {
-	return endpoint.TodoRequest{}, nil
+func decodePingRequest(_ context.Context, _ *http.Request) (interface{}, error) {
+	return endpoint.PingRequest{}, nil
 }
 
-func encodeTodoResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
+func encodePingResponse(_ context.Context, w http.ResponseWriter, response interface{}) error {
 	return json.NewEncoder(w).Encode(response)
 }
 

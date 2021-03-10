@@ -7,6 +7,7 @@ import (
 	"strconv"
 )
 
+// Consul component for register and deregister service in consul.
 type Consul struct {
 	client *api.Client
 }

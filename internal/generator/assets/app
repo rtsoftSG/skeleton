@@ -113,6 +113,7 @@ func (a *App) Run(ctx context.Context) (err error) {
 	return eg.Wait()
 }
 
+// Stop stop application.
 func (a *App) Stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), closeHttpTimeout)
 	defer cancel()

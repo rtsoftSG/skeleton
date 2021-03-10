@@ -7,6 +7,7 @@ import (
     "os"
 )
 
+// NewLogger create new gokit json logger with timestamp and caller keys by default.
 func NewLogger() kitlog.Logger {
     w := kitlog.NewSyncWriter(os.Stdout)
     logger := kitlog.NewJSONLogger(w)
@@ -18,10 +19,12 @@ type loggerKey struct{}
 
 var key = loggerKey{}
 
+// FromContext extract logger from context.
 func FromContext(ctx context.Context) kitlog.Logger {
     return ctx.Value(key).(kitlog.Logger)
 }
 
+// IntoContext put logger l into context.
 func IntoContext(ctx context.Context, l kitlog.Logger) context.Context {
     return context.WithValue(ctx, key, l)
 }
@@ -31,6 +34,7 @@ import (
     "go.uber.org/zap"
 )
 
+// NewLogger create new zap json logger.
 func NewLogger() *zap.Logger {
     zapLogger, err := zap.NewProduction()
     if err != nil {
@@ -44,10 +48,12 @@ type loggerKey struct{}
 
 var key = loggerKey{}
 
+// FromContext extract logger from context.
 func FromContext(ctx context.Context) *zap.Logger {
     return ctx.Value(key).(*zap.Logger)
 }
 
+// IntoContext put logger l into context.
 func IntoContext(ctx context.Context, l *zap.Logger) context.Context {
     return context.WithValue(ctx, key, l)
 }

@@ -6,29 +6,29 @@ import (
 )
 
 type Endpoints struct {
-	TodoEndpoint endpoint.Endpoint
+	PingEndpoint endpoint.Endpoint
 }
 
 func NewEndpoints() Endpoints {
 	var (
 	    {{- if .use_jaeger}}
-	    todoEndpoint = TraceLoggerMiddleware()(MakeTodoEndpoint())
+	    pingEndpoint = TraceLoggerMiddleware()(MakePingEndpoint())
 	    {{- else}}
-	    todoEndpoint = MakeTodoEndpoint()
+	    pingEndpoint = MakePingEndpoint()
 	    {{- end }}
 	)
 
 	endpoints := Endpoints{
-		TodoEndpoint: todoEndpoint,
+		PingEndpoint: pingEndpoint,
 	}
 
 	return endpoints
 }
 
-func MakeTodoEndpoint() endpoint.Endpoint {
+func MakePingEndpoint() endpoint.Endpoint {
 	return func(_ context.Context, request interface{}) (response interface{}, err error) {
-		req := request.(TodoRequest)
+		req := request.(PingRequest)
 		req = req
-		return TodoResponse{}, nil
+		return PingResponse{Result: "pong"}, nil
 	}
 }

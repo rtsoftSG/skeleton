@@ -9,6 +9,7 @@ import (
 	"time"
 )
 
+// InitGlobalTracer register jaeger tracer as global tracer.
 func InitGlobalTracer(name string, agentAddr string) io.Closer {
 	jCfg := jagercfg.Configuration{
 		Disabled:    false,

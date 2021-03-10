@@ -41,6 +41,7 @@ func main() {
     defer cancel()
     {{- if .use_consul}}
 
+    // register service in consul.
     {
         consulCfg := consulapi.DefaultConfig()
         consulCfg.Address = cfg.Consul.Addr
@@ -58,6 +59,7 @@ func main() {
     {{- end }}
     {{- if .use_jaeger}}
 
+    // init jaeger tracer.
     {
         closer := tracer.InitGlobalTracer(cfg.Jaeger.ServiceName, cfg.Jaeger.AgentAddr)
         defer func() {
@@ -74,6 +76,7 @@ func main() {
     wg.Add(1)
     go func() {
         defer wg.Done()
+
         err = app.Run(ctx)
         checkErr(err, logger)
     }()

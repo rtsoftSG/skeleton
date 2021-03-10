@@ -1,5 +1,7 @@
 package endpoint
 
-type TodoRequest struct {}
+type PingRequest struct {}
 
-type TodoResponse struct {}
+type PingResponse struct {
+    Result string `json:"result"`
+}

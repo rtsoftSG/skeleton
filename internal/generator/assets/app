@@ -10,7 +10,6 @@ import (
 	"time"
 {{- if .use_gokit_logger}}
 	kitlog "github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
 {{- end}}
 {{- if .use_zap_logger}}
     "go.uber.org/zap"
@@ -21,15 +20,6 @@ import (
 {{- end}}
 {{- if .use_postgresql}}
 	"github.com/jackc/pgx/v4/pgxpool"
-{{- end}}
-
-{{- if .use_consul}}
-    "net"
-    consulapi "github.com/hashicorp/consul/api"
-    "strconv"
-{{- end}}
-{{- if .use_jaeger}}
-    "{{.module}}/internal/infrastructure/tracer"
 {{- end}}
 
 	"golang.org/x/sync/errgroup"
@@ -90,11 +80,6 @@ func NewApp(cfg *config.Configuration, opts ...Option) *App {
 // Run lunch application.
 func (a *App) Run(ctx context.Context) (err error) {
 	eg := errgroup.Group{}
-    {{- if .use_jaeger}}
-
-    closer := tracer.InitGlobalTracer(a.cfg.Jaeger.ServiceName, a.cfg.Jaeger.AgentAddr)
-    defer closer.Close()
-    {{- end }}
     {{- if .use_clickhouse}}
 
     chConn, err := sql.Open("clickhouse", a.cfg.Ch.DSN)
@@ -115,30 +100,6 @@ func (a *App) Run(ctx context.Context) (err error) {
     }
     defer pool.Close()
     {{- end}}
-    {{- if .use_consul}}
-
-    consulCfg := consulapi.DefaultConfig()
-    consulCfg.Address = a.cfg.Consul.Addr
-
-    consulClient, err := consulapi.NewClient(consulCfg)
-    if err != nil {
-        return fmt.Errorf("create consul client: %w", err)
-    }
-
-    if err = a.registerInConsul(consulClient); err != nil {
-        return err
-    }
-    defer func() {
-        if err = a.deregisterInConsul(consulClient); err != nil {
-            {{- if .use_gokit_logger}}
-            level.Error(a.logger).Log("deregister app in consul", err)
-            {{- end}}
-            {{- if .use_zap_logger}}
-            a.logger.Error("deregister app in consul", zap.Error(err))
-            {{- end}}
-        }
-    }()
-    {{- end}}
 
 	a.httpSrv = httptransport.NewServer(endpoint.NewEndpoints(), a.logger)
 	eg.Go(func() error {
@@ -151,45 +112,6 @@ func (a *App) Run(ctx context.Context) (err error) {
 
 	return eg.Wait()
 }
-
-{{- if .use_consul}}
-
-func (a *App) registerInConsul(client *consulapi.Client) error {
-    host, port, err := net.SplitHostPort(a.cfg.Consul.AgentAddr)
-    if err != nil {
-        return fmt.Errorf("parse consul agent addr: %w", err)
-    }
-
-    p, err := strconv.Atoi(port)
-    if err != nil {
-        return fmt.Errorf("parse consul agent port: %w", err)
-    }
-
-    if err = client.Agent().ServiceRegister(&consulapi.AgentServiceRegistration{
-        ID:      a.cfg.Consul.ServiceID,
-        Name:    a.cfg.Consul.ServiceName,
-        Port:    p,
-        Address: fmt.Sprintf("http://%s", host),
-        Check: &consulapi.AgentServiceCheck{
-            Interval: "5s",
-            Timeout:  "3s",
-            HTTP:     fmt.Sprintf("http://%s:%d/health-check", host, p),
-        },
-    }); err != nil {
-        return fmt.Errorf("sign up service via consul: %w", err)
-    }
-
-	return nil
-}
-
-func (a *App) deregisterInConsul(client *consulapi.Client) error {
-	if err := client.Agent().ServiceDeregister(a.cfg.Consul.ServiceID); err != nil {
-		return fmt.Errorf("deregister service in consul: %w", err)
-	}
-
-	return nil
-}
-{{- end }}
 
 func (a *App) Stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), closeHttpTimeout)

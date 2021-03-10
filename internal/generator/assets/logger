@@ -26,7 +26,10 @@ func IntoContext(ctx context.Context, l kitlog.Logger) context.Context {
     return context.WithValue(ctx, key, l)
 }
 {{- else}}
-import 	"go.uber.org/zap"
+import (
+    "context"
+    "go.uber.org/zap"
+)
 
 func NewLogger() *zap.Logger {
     zapLogger, err := zap.NewProduction()

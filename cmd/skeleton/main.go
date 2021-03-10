@@ -93,7 +93,7 @@ func runChooseConsulMenu(s *generator.Settings) error {
 		if s.UseConsul {
 			m := wmenu.NewMenu("Sync config with consul?")
 			m.IsYesNo(wmenu.DefY)
-			consulMenu.AddColor(wlog.BrightGreen, wlog.BrightYellow, wlog.None, wlog.Red)
+			m.AddColor(wlog.BrightGreen, wlog.BrightYellow, wlog.None, wlog.Red)
 			m.Action(func(opts []wmenu.Opt) error {
 				s.SyncConfigWithConsul = opts[0].Value.(string) == "yes"
 				return nil

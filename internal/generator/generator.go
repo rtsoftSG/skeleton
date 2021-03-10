@@ -26,7 +26,7 @@ func Run(settings *Settings) error {
 
 	log.Print("create directories ...")
 	if err := g.createDirectoryLayout(); err != nil {
-		return err
+		return fmt.Errorf("create directory structure: %w", err)
 	}
 
 	rootDir := g.settings.ProjectRootDir
@@ -63,6 +63,13 @@ func Run(settings *Settings) error {
 		}
 	}
 
+	if settings.UseConsul {
+		log.Print("create infrastructure/consul package ...")
+		if err := execTplAndFormat(g.writeConsul, path.Join(rootDir, "internal/infrastructure/consul/consul.go")); err != nil {
+			return err
+		}
+	}
+
 	log.Print("create app.go ...")
 	if err := execTplAndFormat(g.writeApp, path.Join(rootDir, "internal/app.go")); err != nil {
 		return err
@@ -81,6 +88,11 @@ func Run(settings *Settings) error {
 
 	log.Print("create transport/http package ...")
 	if err := execTplAndFormat(g.writeHttpServer, path.Join(rootDir, "internal/transport/http/server.go")); err != nil {
+		return err
+	}
+
+	log.Print("create test package ...")
+	if err := execTplAndFormat(g.writeTest, path.Join(rootDir, "test/app_test.go")); err != nil {
 		return err
 	}
 
@@ -130,6 +142,11 @@ func (g *generator) createDirectoryLayout() error {
 		return err
 	}
 
+	err = os.Mkdir(path.Join(g.settings.ProjectRootDir, "test/"), 0755)
+	if err != nil && !os.IsExist(err) {
+		return err
+	}
+
 	err = os.Mkdir(path.Join(g.settings.ProjectRootDir, "internal/"), 0755)
 	if err != nil && !os.IsExist(err) {
 		return err
@@ -147,6 +164,13 @@ func (g *generator) createDirectoryLayout() error {
 
 	if g.settings.UseJaeger {
 		err = os.Mkdir(path.Join(g.settings.ProjectRootDir, "internal/infrastructure/tracer"), 0755)
+		if err != nil && !os.IsExist(err) {
+			return err
+		}
+	}
+
+	if g.settings.UseConsul {
+		err = os.Mkdir(path.Join(g.settings.ProjectRootDir, "internal/infrastructure/consul"), 0755)
 		if err != nil && !os.IsExist(err) {
 			return err
 		}
@@ -205,6 +229,8 @@ func (g *generator) writeMain(w io.Writer) error {
 		"module":           g.settings.ProjectName,
 		"use_gokit_logger": g.settings.Logger == GoKit,
 		"use_zap_logger":   g.settings.Logger == Zap,
+		"use_jaeger":       g.settings.UseJaeger,
+		"use_consul":       g.settings.UseConsul,
 	})
 }
 
@@ -260,6 +286,15 @@ func (g *generator) writeTracer(w io.Writer) error {
 	return tpl.Execute(w, map[string]interface{}{})
 }
 
+func (g *generator) writeConsul(w io.Writer) error {
+	tpl, err := template.New("consul").ParseFS(templates, "assets/consul")
+	if err != nil {
+		return err
+	}
+
+	return tpl.Execute(w, map[string]interface{}{})
+}
+
 func (g *generator) writeApp(w io.Writer) error {
 	tpl, err := template.New("app").ParseFS(templates, "assets/app")
 	if err != nil {
@@ -270,8 +305,6 @@ func (g *generator) writeApp(w io.Writer) error {
 		"module":           g.settings.ProjectName,
 		"use_clickhouse":   g.settings.Database == Clickhouse,
 		"use_postgresql":   g.settings.Database == Postgresql,
-		"use_jaeger":       g.settings.UseJaeger,
-		"use_consul":       g.settings.UseConsul,
 		"use_gokit_logger": g.settings.Logger == GoKit,
 		"use_zap_logger":   g.settings.Logger == Zap,
 	})
@@ -329,5 +362,16 @@ func (g *generator) writeHttpServer(w io.Writer) error {
 		"use_prometheus":   g.settings.UsePrometheus,
 		"use_gorilla":      g.settings.Router == GorillaMux,
 		"use_gin":          g.settings.Router == GIN,
+	})
+}
+
+func (g *generator) writeTest(w io.Writer) error {
+	tpl, err := template.New("app_test").ParseFS(templates, "assets/app_test")
+	if err != nil {
+		return err
+	}
+
+	return tpl.Execute(w, map[string]interface{}{
+		"module": g.settings.ProjectName,
 	})
 }

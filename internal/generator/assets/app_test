@@ -1,0 +1,58 @@
+package test
+
+import (
+	"context"
+	"io"
+	"net/http"
+	"strings"
+	"testing"
+	"time"
+	"{{.module}}/internal"
+
+	"github.com/stretchr/testify/suite"
+
+	"{{.module}}/internal/config"
+)
+
+type APPServerTS struct {
+	suite.Suite
+	app    *internal.App
+	cancel context.CancelFunc
+}
+
+func (a *APPServerTS) SetupSuite() {
+	a.app = internal.NewApp(&config.Configuration{})
+
+	var ctx context.Context
+	ctx, a.cancel = context.WithCancel(context.Background())
+
+	go func() {
+		a.NoError(a.app.Run(ctx))
+	}()
+
+	// wait for server is starting
+	time.Sleep(time.Second)
+}
+
+func (a *APPServerTS) TearDownSuite() {
+	a.cancel()
+	a.NoError(a.app.Stop())
+}
+
+func TestAPPServer(t *testing.T) {
+	suite.Run(t, new(APPServerTS))
+}
+
+// TestTODOEndpoint - send request to todo-endpoint and assert response.
+func (a *APPServerTS) TestTODOEndpoint() {
+	resp, err := http.DefaultClient.Get("http://localhost:8080/todo")
+	if err != nil {
+		a.T().Fatalf("http error %s", err.Error())
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	a.NoError(err)
+
+	a.Equal("{}", strings.TrimSpace(string(data)))
+}

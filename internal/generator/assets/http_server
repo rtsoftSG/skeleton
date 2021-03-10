@@ -16,7 +16,9 @@ import (
     {{- end}}
     "{{.module}}/internal/infrastructure/logger"
     "{{.module}}/internal/endpoint"
-	"github.com/go-kit/kit/transport"
+    {{- if .use_gokit_logger }}
+    "github.com/go-kit/kit/transport"
+    {{- end }}
 	httptransport "github.com/go-kit/kit/transport/http"
 	{{- if .use_gorilla }}
 	"github.com/gorilla/mux"
@@ -41,7 +43,7 @@ func NewServer(endpoints endpoint.Endpoints, l *zap.Logger) *http.Server {
 		httptransport.ServerErrorHandler(transport.NewLogErrorHandler(l)),
 		{{- end }}
 		{{- if .use_zap_logger}}
-		httptransport.ServerErrorHandler(logErrorHandler(l)),
+		httptransport.ServerErrorHandler(newLogErrorHandler(l)),
 		{{- end }}
 		httptransport.ServerErrorEncoder(encodeError),
 		httptransport.ServerBefore(
@@ -136,12 +138,12 @@ type logErrorHandler struct {
 }
 
 func newLogErrorHandler(logger *zap.Logger) *logErrorHandler {
-	return &LogErrorHandler{
+	return &logErrorHandler{
 		logger: logger,
 	}
 }
 
-func (h *logErrorHandler) Handle(ctx context.Context, err error) {
+func (h *logErrorHandler) Handle(_ context.Context, err error) {
 	h.logger.Error("err", zap.Error(err))
 }
 {{- end}}

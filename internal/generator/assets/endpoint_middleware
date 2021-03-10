@@ -23,13 +23,15 @@ func TraceLoggerMiddleware() endpoint.Middleware {
 		return func(ctx context.Context, request interface{}) (response interface{}, err error) {
 			span := opentracing.SpanFromContext(ctx)
 			if span != nil {
-				l := logger.FromContext(ctx)
-				{{- if .use_gokit_logger }}
-				ctx = logger.IntoContext(ctx, log.With(l, "trace_id", span.Context().(jaeger.SpanContext).TraceID().String()))
-				{{- end }}
-				{{- if .use_zap_logger }}
-				ctx = logger.IntoContext(ctx, l.With(zap.String("trace_id", span.Context().(jaeger.SpanContext).TraceID().String())))
-				{{- end }}
+			    if jaegerSpanContext, ok := span.Context().(jaeger.SpanContext); ok {
+                	l := logger.FromContext(ctx)
+                    {{- if .use_gokit_logger }}
+                    ctx = logger.IntoContext(ctx, log.With(l, "trace_id", jaegerSpanContext.TraceID().String()))
+                    {{- end }}
+                    {{- if .use_zap_logger }}
+                    ctx = logger.IntoContext(ctx, l.With(zap.String("trace_id", jaegerSpanContext.TraceID().String())))
+                    {{- end }}
+                }
 			}
 
 			return next(ctx, request)

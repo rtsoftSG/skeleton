@@ -65,6 +65,9 @@ func main() {
 					if err := runChooseDBMenu(&generatorSettings); err != nil {
 						return err
 					}
+					if err := runChooseRouterMenu(&generatorSettings); err != nil {
+						return err
+					}
 
 					return generator.Run(&generatorSettings)
 				},
@@ -131,7 +134,7 @@ func runChoosePrometheusMenu(s *generator.Settings) error {
 }
 
 func runChooseLoggerMenu(s *generator.Settings) error {
-	loggerMenu := wmenu.NewMenu("Choose logger")
+	loggerMenu := wmenu.NewMenu("Select logger")
 
 	loggerMenu.LoopOnInvalid()
 	loggerMenu.AddColor(wlog.BrightGreen, wlog.BrightYellow, wlog.None, wlog.Red)
@@ -147,7 +150,7 @@ func runChooseLoggerMenu(s *generator.Settings) error {
 }
 
 func runChooseDBMenu(s *generator.Settings) error {
-	dbMenu := wmenu.NewMenu("Choose database")
+	dbMenu := wmenu.NewMenu("Select database")
 
 	dbMenu.LoopOnInvalid()
 	dbMenu.AddColor(wlog.BrightGreen, wlog.BrightYellow, wlog.None, wlog.Red)
@@ -160,4 +163,19 @@ func runChooseDBMenu(s *generator.Settings) error {
 	dbMenu.Option(string(generator.Clickhouse), generator.Clickhouse, false, nil)
 	dbMenu.Option(string(generator.Postgresql), generator.Postgresql, false, nil)
 	return dbMenu.Run()
+}
+
+func runChooseRouterMenu(s *generator.Settings) error {
+	routerMenu := wmenu.NewMenu("Select router")
+
+	routerMenu.LoopOnInvalid()
+	routerMenu.AddColor(wlog.BrightGreen, wlog.BrightYellow, wlog.None, wlog.Red)
+
+	routerMenu.Action(func(opts []wmenu.Opt) error {
+		s.Router = opts[0].Value.(generator.RouterChoice)
+		return nil
+	})
+	routerMenu.Option(string(generator.GorillaMux), generator.GorillaMux, true, nil)
+	routerMenu.Option(string(generator.GIN), generator.GIN, false, nil)
+	return routerMenu.Run()
 }

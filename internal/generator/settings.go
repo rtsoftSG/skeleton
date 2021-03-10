@@ -15,11 +15,19 @@ const (
 	Postgresql DBChoice = "Postgres"
 )
 
+type RouterChoice string
+
+const (
+	GorillaMux RouterChoice = "Gorilla mux"
+	GIN        RouterChoice = "GIN"
+)
+
 type Settings struct {
 	ProjectName          string
 	ProjectRootDir       string
 	Logger               LoggerChoice
 	Database             DBChoice
+	Router               RouterChoice
 	UseConsul            bool
 	SyncConfigWithConsul bool
 	UseJaeger            bool

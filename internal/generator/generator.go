@@ -313,7 +313,7 @@ func (g *generator) writeEndpointsResponseRequest(w io.Writer) error {
 }
 
 func (g *generator) writeHttpServer(w io.Writer) error {
-	tpl, err := template.New("http_server_gorilla").ParseFS(templates, "assets/http_server_gorilla")
+	tpl, err := template.New("http_server").ParseFS(templates, "assets/http_server")
 	if err != nil {
 		return err
 	}
@@ -327,5 +327,7 @@ func (g *generator) writeHttpServer(w io.Writer) error {
 		"use_gokit_logger": g.settings.Logger == GoKit,
 		"use_zap_logger":   g.settings.Logger == Zap,
 		"use_prometheus":   g.settings.UsePrometheus,
+		"use_gorilla":      g.settings.Router == GorillaMux,
+		"use_gin":          g.settings.Router == GIN,
 	})
 }

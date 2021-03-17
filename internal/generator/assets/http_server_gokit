@@ -20,12 +20,7 @@ import (
     "github.com/go-kit/kit/transport"
     {{- end }}
 	httptransport "github.com/go-kit/kit/transport/http"
-	{{- if .use_gorilla }}
 	"github.com/gorilla/mux"
-	{{- end }}
-	{{- if .use_gin }}
-	"github.com/gin-gonic/gin"
-	{{- end }}
 
 	"net/http"
 )
@@ -38,40 +33,39 @@ func NewServer(endpoints endpoint.Endpoints, l log.Logger) *http.Server {
 
 func NewServer(endpoints endpoint.Endpoints, l *zap.Logger) *http.Server {
 {{- end }}
-	opts := []httptransport.ServerOption{
-		{{- if .use_gokit_logger}}
-		httptransport.ServerErrorHandler(transport.NewLogErrorHandler(l)),
-		{{- end }}
-		{{- if .use_zap_logger}}
-		httptransport.ServerErrorHandler(newLogErrorHandler(l)),
-		{{- end }}
-		httptransport.ServerErrorEncoder(encodeError),
-		httptransport.ServerBefore(
-		    {{- if .use_jaeger}}
-			kitopentracing.HTTPToContext(opentracing.GlobalTracer(), "{{.module}}", log.NewNopLogger()),
-			{{- end }}
+    opts := []httptransport.ServerOption{
+        {{- if .use_gokit_logger}}
+        httptransport.ServerErrorHandler(transport.NewLogErrorHandler(l)),
+        {{- end }}
+        {{- if .use_zap_logger}}
+        httptransport.ServerErrorHandler(newLogErrorHandler(l)),
+        {{- end }}
+        httptransport.ServerErrorEncoder(encodeError),
+        httptransport.ServerBefore(
+            {{- if .use_jaeger}}
+            kitopentracing.HTTPToContext(opentracing.GlobalTracer(), "{{.module}}", log.NewNopLogger()),
+            {{- end }}
             func(ctx context.Context, request *http.Request) context.Context {
                 return logger.IntoContext(ctx, l)
             },
-		),
-	}
+        ),
+    }
 
     // todo write your own endpoints and handlers
-	pingHandler := httptransport.NewServer(
-	    {{- if .use_jaeger}}
-		kitopentracing.TraceServer(opentracing.GlobalTracer(), "{{.module}}")(endpoints.PingEndpoint),
-		{{- else }}
-		endpoints.PingEndpoint,
-		{{- end }}
-		decodePingRequest,
-		encodePingResponse,
-		opts...,
-	)
+    pingHandler := httptransport.NewServer(
+        {{- if .use_jaeger}}
+        kitopentracing.TraceServer(opentracing.GlobalTracer(), "{{.module}}")(endpoints.PingEndpoint),
+        {{- else }}
+        endpoints.PingEndpoint,
+        {{- end }}
+        decodePingRequest,
+        encodePingResponse,
+        opts...,
+    )
 
-    {{- if .use_gorilla }}
 	r := mux.NewRouter()
-	r.Methods("GET").Path("/ping").Handler(pingHandler)
-        {{- if .use_consul}}
+	r.Methods("GET").Path("/api/ping").Handler(pingHandler)
+    {{- if .use_consul}}
 
     r.Methods("GET").Path("/health-check").HandlerFunc(
         func(writer http.ResponseWriter, request *http.Request) {
@@ -79,31 +73,11 @@ func NewServer(endpoints endpoint.Endpoints, l *zap.Logger) *http.Server {
             writer.Write([]byte("{}"))
         },
     )
-        {{- end}}
-        {{- if .use_prometheus }}
+    {{- end}}
+    {{- if .use_prometheus }}
 
    	r.Handle("/metrics", promhttp.Handler())
-        {{- end}}
-	{{- end }}
-    {{- if .use_gin }}
-    r := gin.Default()
-
-    r.GET("/ping", func(c *gin.Context) {
-    	pingHandler.ServeHTTP(c.Writer, c.Request)
-    })
-        {{- if .use_consul}}
-
-    r.GET("/health-check", func(c *gin.Context) {
-    	c.JSON(http.StatusOK, gin.H{})
-    })
-        {{- end}}
-        {{- if .use_prometheus }}
-
-   	r.GET("/metrics", func(c *gin.Context) {
-   	    promhttp.Handler().ServeHTTP(c.Writer, c.Request)
-   	})
-        {{- end}}
-    {{- end }}
+    {{- end}}
 
 	return &http.Server{
         Addr:    ":8080",

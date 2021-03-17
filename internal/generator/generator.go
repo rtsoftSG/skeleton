@@ -76,20 +76,32 @@ func Run(settings *Settings) error {
 		return err
 	}
 
-	log.Print("create endpoint package ...")
-	if err := execTplAndFormat(g.writeEndpoints, path.Join(rootDir, "internal/endpoint/endpoints.go")); err != nil {
-		return err
-	}
-	if err := execTplAndFormat(g.writeEndpointsMiddlewares, path.Join(rootDir, "internal/endpoint/middleware.go")); err != nil {
-		return err
-	}
-	if err := execTplAndFormat(g.writeEndpointsResponseRequest, path.Join(rootDir, "internal/endpoint/request.go")); err != nil {
-		return err
+	if g.settings.Router == GorillaMux {
+		log.Print("create endpoint package ...")
+		if err := execTplAndFormat(g.writeEndpoints, path.Join(rootDir, "internal/endpoint/endpoints.go")); err != nil {
+			return err
+		}
+		if err := execTplAndFormat(g.writeEndpointsMiddlewares, path.Join(rootDir, "internal/endpoint/middleware.go")); err != nil {
+			return err
+		}
+		if err := execTplAndFormat(g.writeEndpointsResponseRequest, path.Join(rootDir, "internal/endpoint/request.go")); err != nil {
+			return err
+		}
 	}
 
 	log.Print("create transport/http package ...")
-	if err := execTplAndFormat(g.writeHttpServer, path.Join(rootDir, "internal/transport/http/server.go")); err != nil {
-		return err
+	switch settings.Router {
+	case GorillaMux:
+		if err := execTplAndFormat(g.writeGoKitHttpServer, path.Join(rootDir, "internal/transport/http/server.go")); err != nil {
+			return err
+		}
+	case GIN:
+		if err := execTplAndFormat(g.writeGinResponseRequest, path.Join(rootDir, "internal/transport/http/request.go")); err != nil {
+			return err
+		}
+		if err := execTplAndFormat(g.writeGinHttpServer, path.Join(rootDir, "internal/transport/http/server.go")); err != nil {
+			return err
+		}
 	}
 
 	log.Print("create test package ...")
@@ -105,6 +117,8 @@ func Run(settings *Settings) error {
 			return fmt.Errorf("go mod vendor command: %w", err)
 		}
 	}
+
+	log.Print("DONE!")
 
 	return nil
 }
@@ -182,9 +196,11 @@ func (g *generator) createDirectoryLayout() error {
 		return err
 	}
 
-	err = os.Mkdir(path.Join(g.settings.ProjectRootDir, "internal/endpoint"), 0755)
-	if err != nil && !os.IsExist(err) {
-		return err
+	if g.settings.Router == GorillaMux {
+		err = os.Mkdir(path.Join(g.settings.ProjectRootDir, "internal/endpoint"), 0755)
+		if err != nil && !os.IsExist(err) {
+			return err
+		}
 	}
 
 	err = os.Mkdir(path.Join(g.settings.ProjectRootDir, "internal/transport"), 0755)
@@ -313,11 +329,13 @@ func (g *generator) writeApp(w io.Writer) error {
 		"use_postgresql":   g.settings.Database == Postgresql,
 		"use_gokit_logger": g.settings.Logger == GoKit,
 		"use_zap_logger":   g.settings.Logger == Zap,
+		"use_gorilla_mux":  g.settings.Router == GorillaMux,
+		"use_gin":          g.settings.Router == GIN,
 	})
 }
 
 func (g *generator) writeEndpoints(w io.Writer) error {
-	tpl, err := g.createTemplate("endpoint")
+	tpl, err := g.createTemplate("endpoint_gokit")
 	if err != nil {
 		return err
 	}
@@ -343,7 +361,7 @@ func (g *generator) writeEndpointsMiddlewares(w io.Writer) error {
 }
 
 func (g *generator) writeEndpointsResponseRequest(w io.Writer) error {
-	tpl, err := g.createTemplate("endpoint_req_resp")
+	tpl, err := g.createTemplate("endpoint_req_resp_gokit")
 	if err != nil {
 		return err
 	}
@@ -351,8 +369,8 @@ func (g *generator) writeEndpointsResponseRequest(w io.Writer) error {
 	return tpl.Execute(w, map[string]interface{}{})
 }
 
-func (g *generator) writeHttpServer(w io.Writer) error {
-	tpl, err := g.createTemplate("http_server")
+func (g *generator) writeGoKitHttpServer(w io.Writer) error {
+	tpl, err := g.createTemplate("http_server_gokit")
 	if err != nil {
 		return err
 	}
@@ -366,9 +384,34 @@ func (g *generator) writeHttpServer(w io.Writer) error {
 		"use_gokit_logger": g.settings.Logger == GoKit,
 		"use_zap_logger":   g.settings.Logger == Zap,
 		"use_prometheus":   g.settings.UsePrometheus,
-		"use_gorilla":      g.settings.Router == GorillaMux,
-		"use_gin":          g.settings.Router == GIN,
 	})
+}
+
+func (g *generator) writeGinHttpServer(w io.Writer) error {
+	tpl, err := g.createTemplate("http_server_gin")
+	if err != nil {
+		return err
+	}
+
+	return tpl.Execute(w, map[string]interface{}{
+		"module":           g.settings.ProjectName,
+		"use_clickhouse":   g.settings.Database == Clickhouse,
+		"use_postgresql":   g.settings.Database == Postgresql,
+		"use_jaeger":       g.settings.UseJaeger,
+		"use_consul":       g.settings.UseConsul,
+		"use_gokit_logger": g.settings.Logger == GoKit,
+		"use_zap_logger":   g.settings.Logger == Zap,
+		"use_prometheus":   g.settings.UsePrometheus,
+	})
+}
+
+func (g *generator) writeGinResponseRequest(w io.Writer) error {
+	tpl, err := g.createTemplate("endpoint_req_resp_gin")
+	if err != nil {
+		return err
+	}
+
+	return tpl.Execute(w, map[string]interface{}{})
 }
 
 func (g *generator) writeTest(w io.Writer) error {

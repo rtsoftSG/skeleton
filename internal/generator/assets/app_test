@@ -45,7 +45,7 @@ func TestAPPServer(t *testing.T) {
 
 // TestPingEndpoint - send request to ping-endpoint and assert response.
 func (a *APPServerTS) TestPingEndpoint() {
-	resp, err := http.DefaultClient.Get("http://localhost:8080/ping")
+	resp, err := http.DefaultClient.Get("http://localhost:8080/api/ping")
 	if err != nil {
 		a.T().Fatalf("http error %s", err.Error())
 	}

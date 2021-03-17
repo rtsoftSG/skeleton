@@ -175,7 +175,7 @@ func runChooseRouterMenu(s *generator.Settings) error {
 		s.Router = opts[0].Value.(generator.RouterChoice)
 		return nil
 	})
-	routerMenu.Option(string(generator.GorillaMux), generator.GorillaMux, true, nil)
-	routerMenu.Option(string(generator.GIN), generator.GIN, false, nil)
+	routerMenu.Option(string(generator.GorillaMux)+", go-kit endpoints", generator.GorillaMux, true, nil)
+	routerMenu.Option(string(generator.GIN)+", gin endpoints", generator.GIN, false, nil)
 	return routerMenu.Run()
 }

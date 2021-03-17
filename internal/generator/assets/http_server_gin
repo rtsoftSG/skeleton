@@ -1,0 +1,75 @@
+package http
+
+import (
+	{{- if .use_zap_logger}}
+    "go.uber.org/zap"
+    {{- end}}
+    {{- if .use_jaeger}}
+	"github.com/opentracing-contrib/go-gin/ginhttp"
+	"github.com/opentracing/opentracing-go"
+    {{- end}}
+    {{- if .use_prometheus }}
+    "github.com/prometheus/client_golang/prometheus/promhttp"
+    {{- end}}
+    {{- if .use_gokit_logger }}
+    "github.com/go-kit/kit/log"
+    "github.com/go-kit/kit/log/level"
+    {{- end }}
+	"github.com/gin-gonic/gin"
+
+	"net/http"
+)
+
+{{- if .use_gokit_logger}}
+
+func NewServer(l log.Logger) *http.Server {
+{{- end }}
+{{- if .use_zap_logger}}
+
+func NewServer(l *zap.Logger) *http.Server {
+{{- end }}
+    r := gin.Default()
+
+	api := r.Group("/api")
+	{{- if .use_jaeger}}
+    api.Use(ginhttp.Middleware(opentracing.GlobalTracer()))
+    {{- end }}
+    api.GET("/ping", func(c *gin.Context) {
+        var request PingRequest
+
+        if err := c.Bind(&request); err != nil {
+            {{- if .use_zap_logger}}
+            l.Error("binding request", zap.Error(err))
+            {{- end }}
+            {{- if .use_gokit_logger}}
+            level.Error(l).Log("binding request", err)
+            {{- end }}
+
+            c.JSON(http.StatusBadRequest, ErrorResponse{
+                Error: err.Error(),
+            })
+
+            return
+        }
+
+        c.JSON(http.StatusOK, PingResponse{Result: "pong"})
+        return
+    })
+    {{- if .use_consul}}
+
+    r.GET("/health-check", func(c *gin.Context) {
+    	c.JSON(http.StatusOK, gin.H{})
+    })
+    {{- end}}
+    {{- if .use_prometheus }}
+
+   	r.GET("/metrics", func(c *gin.Context) {
+   	    promhttp.Handler().ServeHTTP(c.Writer, c.Request)
+   	})
+    {{- end}}
+
+	return &http.Server{
+        Addr:    ":8080",
+		Handler: r,
+	}
+}

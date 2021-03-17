@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	httptransport "{{.module}}/internal/transport/http"
+{{- if .use_gorilla_mux }}
 	"{{.module}}/internal/endpoint"
+{{- end }}
 	"time"
 {{- if .use_gokit_logger}}
 	kitlog "github.com/go-kit/kit/log"
@@ -106,7 +108,12 @@ func (a *App) Run(ctx context.Context) (err error) {
     {{log "a.logger" "info" "open postgres connection"}}
     {{- end}}
 
-	a.httpSrv = httptransport.NewServer(endpoint.NewEndpoints(), a.logger)
+    {{- if .use_gorilla_mux }}
+    a.httpSrv = httptransport.NewServer(endpoint.NewEndpoints(), a.logger)
+    {{- end }}
+    {{- if .use_gin }}
+    a.httpSrv = httptransport.NewServer(a.logger)
+    {{- end }}
 	{{log "a.logger" "info" "starting http server"}}
 
 	eg.Go(func() error {

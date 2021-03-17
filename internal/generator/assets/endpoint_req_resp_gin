@@ -1,0 +1,11 @@
+package http
+
+type ErrorResponse struct {
+	Error string `json:"error"`
+}
+
+type PingRequest struct{}
+
+type PingResponse struct {
+	Result string `json:"result"`
+}

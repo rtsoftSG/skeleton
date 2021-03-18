@@ -1,7 +1,0 @@
-package endpoint
-
-type PingRequest struct {}
-
-type PingResponse struct {
-    Result string `json:"result"`
-}

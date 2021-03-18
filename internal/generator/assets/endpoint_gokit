@@ -25,6 +25,12 @@ func NewEndpoints() Endpoints {
 	return endpoints
 }
 
+type PingRequest struct {}
+
+type PingResponse struct {
+    Result string `json:"result"`
+}
+
 func MakePingEndpoint() endpoint.Endpoint {
 	return func(_ context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(PingRequest)

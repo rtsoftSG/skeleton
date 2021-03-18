@@ -37,6 +37,26 @@ func Run(settings *Settings) error {
 		return err
 	}
 
+	log.Print("create .gitignore file ...")
+	if err := execTpl(g.writeGitignore, path.Join(rootDir, ".gitignore")); err != nil {
+		return err
+	}
+
+	log.Print("create Dockerfile file ...")
+	if err := execTpl(g.writeDockerfile, path.Join(rootDir, "Dockerfile")); err != nil {
+		return err
+	}
+
+	log.Print("create Makefile file ...")
+	if err := execTpl(g.writeMakefile, path.Join(rootDir, "Makefile")); err != nil {
+		return err
+	}
+
+	log.Print("create README.md ...")
+	if err := execTpl(g.writeReadme, path.Join(rootDir, "README.md")); err != nil {
+		return err
+	}
+
 	log.Print("create main.go ...")
 	if err := execTplAndFormat(g.writeMain, path.Join(rootDir, "cmd", g.settings.ProjectName, "main.go")); err != nil {
 		return err
@@ -84,9 +104,6 @@ func Run(settings *Settings) error {
 		if err := execTplAndFormat(g.writeEndpointsMiddlewares, path.Join(rootDir, "internal/endpoint/middleware.go")); err != nil {
 			return err
 		}
-		if err := execTplAndFormat(g.writeEndpointsResponseRequest, path.Join(rootDir, "internal/endpoint/request.go")); err != nil {
-			return err
-		}
 	}
 
 	log.Print("create transport/http package ...")
@@ -96,9 +113,6 @@ func Run(settings *Settings) error {
 			return err
 		}
 	case GIN:
-		if err := execTplAndFormat(g.writeGinResponseRequest, path.Join(rootDir, "internal/transport/http/request.go")); err != nil {
-			return err
-		}
 		if err := execTplAndFormat(g.writeGinHttpServer, path.Join(rootDir, "internal/transport/http/server.go")); err != nil {
 			return err
 		}
@@ -241,6 +255,51 @@ func (g *generator) writeGoMod(w io.Writer) error {
 	return tpl.Execute(w, map[string]interface{}{"module": g.settings.ProjectName})
 }
 
+func (g *generator) writeGitignore(w io.Writer) error {
+	tpl, err := g.createTemplate("gitignore")
+	if err != nil {
+		return err
+	}
+
+	return tpl.Execute(w, map[string]interface{}{})
+}
+
+func (g *generator) writeDockerfile(w io.Writer) error {
+	tpl, err := g.createTemplate("dockerfile")
+	if err != nil {
+		return err
+	}
+
+	return tpl.Execute(w, map[string]interface{}{"module": g.settings.ProjectName})
+}
+
+func (g *generator) writeMakefile(w io.Writer) error {
+	tpl, err := g.createTemplate("makefile")
+	if err != nil {
+		return err
+	}
+
+	return tpl.Execute(w, map[string]interface{}{"module": g.settings.ProjectName})
+}
+
+func (g *generator) writeReadme(w io.Writer) error {
+	tpl, err := g.createTemplate("readme")
+	if err != nil {
+		return err
+	}
+
+	return tpl.Execute(w, map[string]interface{}{
+		"module":          strings.ToUpper(g.settings.ProjectName),
+		"use_clickhouse":  g.settings.Database == Clickhouse,
+		"use_postgresql":  g.settings.Database == Postgresql,
+		"use_gorilla_mux": g.settings.Router == GorillaMux,
+		"use_gin":         g.settings.Router == GIN,
+		"use_jaeger":      g.settings.UseJaeger,
+		"use_consul":      g.settings.UseConsul,
+		"use_prometheus":  g.settings.UsePrometheus,
+	})
+}
+
 func (g *generator) writeMain(w io.Writer) error {
 	tpl, err := g.createTemplate("main")
 	if err != nil {
@@ -360,15 +419,6 @@ func (g *generator) writeEndpointsMiddlewares(w io.Writer) error {
 	})
 }
 
-func (g *generator) writeEndpointsResponseRequest(w io.Writer) error {
-	tpl, err := g.createTemplate("endpoint_req_resp_gokit")
-	if err != nil {
-		return err
-	}
-
-	return tpl.Execute(w, map[string]interface{}{})
-}
-
 func (g *generator) writeGoKitHttpServer(w io.Writer) error {
 	tpl, err := g.createTemplate("http_server_gokit")
 	if err != nil {
@@ -403,15 +453,6 @@ func (g *generator) writeGinHttpServer(w io.Writer) error {
 		"use_zap_logger":   g.settings.Logger == Zap,
 		"use_prometheus":   g.settings.UsePrometheus,
 	})
-}
-
-func (g *generator) writeGinResponseRequest(w io.Writer) error {
-	tpl, err := g.createTemplate("endpoint_req_resp_gin")
-	if err != nil {
-		return err
-	}
-
-	return tpl.Execute(w, map[string]interface{}{})
 }
 
 func (g *generator) writeTest(w io.Writer) error {

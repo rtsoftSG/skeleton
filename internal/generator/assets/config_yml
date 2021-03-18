@@ -1,0 +1,28 @@
+{{ if .use_clickhouse -}}
+ch:
+# todo set clickhouse dsn
+  dsn: "clickhouse://localhost:9000?debug=false&database=default&username=default&password=password"
+{{ end }}
+{{- if .use_postgresql -}}
+postgres:
+# todo set postgresql dsn
+  dsn: "postgres://postgres:postgres@0.0.0.0:5432/some-db"
+# todo set postgresql connection pool max connections
+  pool_max_conns: 10
+{{ end }}
+{{- if .use_jaeger -}}
+jaeger:
+# todo set jaeger agent address
+  agent_addr: "0.0.0.0:6831"
+  service_name: "A-PLATFORM"
+{{ end }}
+{{- if .use_consul -}}
+consul:
+# todo set consul address
+  addr: "localhost:8500"
+# todo set consul agent address
+  agent_addr: "localhost:8080"
+# todo set service id in consul
+  service_id: ""
+  service_name: "{{.module}}"
+{{ end }}

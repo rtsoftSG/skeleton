@@ -1,0 +1,115 @@
+package main
+
+import (
+	"context"
+	"flag"
+	{{- if .use_gokit_logger}}
+	"github.com/go-kit/kit/log/level"
+	kitlog "github.com/go-kit/kit/log"
+	"os"
+	{{- end}}
+	"log"
+	{{if .use_zap_logger}}"go.uber.org/zap"{{end}}
+	"os/signal"
+	"sync"
+	"syscall"
+	"{{.module}}/internal"
+	"{{.module}}/internal/config"
+	applogger "{{.module}}/internal/infrastructure/logger"
+	{{- if .use_consul}}
+        consulapi "github.com/hashicorp/consul/api"
+        "{{.module}}/internal/infrastructure/consul"
+    {{- end}}
+    {{- if .use_jaeger}}
+        "{{.module}}/internal/infrastructure/tracer"
+    {{- end}}
+)
+
+var cfgName = flag.String("cfg", "config", "path to config file")
+
+func main() {
+	flag.Parse()
+
+	cfg, err := config.LoadConfig(*cfgName)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	logger := applogger.NewLogger()
+
+    ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+    defer cancel()
+    {{- if .use_consul}}
+
+    // register service in consul.
+    {
+        consulCfg := consulapi.DefaultConfig()
+        consulCfg.Address = cfg.Consul.Addr
+        consulClient, err := consulapi.NewClient(consulCfg)
+        checkErr(err, logger)
+
+        c := consul.New(consulClient)
+        err = c.Register(cfg.Consul.AgentAddr, cfg.Consul.ServiceName, cfg.Consul.ServiceID)
+        checkErr(err, logger)
+
+        {{log "logger" "info" "register application in consul"}}
+        defer func() {
+            err = c.Deregister(cfg.Consul.ServiceID)
+            checkErr(err, logger)
+            {{log "logger" "info" "deregister application in consul"}}
+        }()
+    }
+    {{- end }}
+    {{- if .use_jaeger}}
+
+    // init jaeger tracer.
+    {
+        closer := tracer.InitGlobalTracer(cfg.Jaeger.ServiceName, cfg.Jaeger.AgentAddr)
+        defer func() {
+            err = closer.Close()
+            checkErr(err, logger)
+        }()
+        {{log "logger" "info" "jaeger tracer initialized"}}
+    }
+    {{- end }}
+
+	app := internal.NewApp(cfg, internal.WithLogger(logger))
+
+	wg := sync.WaitGroup{}
+
+    wg.Add(1)
+    go func() {
+        defer wg.Done()
+        defer {{log "logger" "info" "application stopped"}}
+
+        {{log "logger" "info" "running application"}}
+        err = app.Run(ctx)
+        checkErr(err, logger)
+    }()
+
+    <-ctx.Done()
+    cancel()
+
+    err = app.Stop()
+    checkErr(err, logger)
+
+	wg.Wait()
+}
+
+{{- if .use_gokit_logger}}
+
+func checkErr(err error, l kitlog.Logger) {
+	if err != nil {
+		level.Error(l).Log("init main", err)
+		os.Exit(1)
+	}
+}
+{{- end }}
+{{- if .use_zap_logger}}
+
+func checkErr(err error, l *zap.Logger) {
+	if err != nil {
+		l.Fatal("init main", zap.Error(err))
+	}
+}
+{{- end }}

@@ -1,0 +1,40 @@
+package endpoint
+
+import (
+	"context"
+	"github.com/go-kit/kit/endpoint"
+)
+
+type Endpoints struct {
+	PingEndpoint endpoint.Endpoint
+}
+
+func NewEndpoints() Endpoints {
+	var (
+	    {{- if .use_jaeger}}
+	    pingEndpoint = TraceLoggerMiddleware()(MakePingEndpoint())
+	    {{- else}}
+	    pingEndpoint = MakePingEndpoint()
+	    {{- end }}
+	)
+
+	endpoints := Endpoints{
+		PingEndpoint: pingEndpoint,
+	}
+
+	return endpoints
+}
+
+type PingRequest struct {}
+
+type PingResponse struct {
+    Result string `json:"result"`
+}
+
+func MakePingEndpoint() endpoint.Endpoint {
+	return func(_ context.Context, request interface{}) (response interface{}, err error) {
+		req := request.(PingRequest)
+		req = req
+		return PingResponse{Result: "pong"}, nil
+	}
+}

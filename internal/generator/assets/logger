@@ -1,0 +1,69 @@
+package logger
+
+{{if .use_gokit_logger}}
+import (
+    "context"
+    kitlog "github.com/go-kit/kit/log"
+    "os"
+)
+
+// NewLogger create new gokit json logger with timestamp and caller keys by default.
+func NewLogger() kitlog.Logger {
+    w := kitlog.NewSyncWriter(os.Stdout)
+    logger := kitlog.NewJSONLogger(w)
+    logger = kitlog.With(logger, "ts", kitlog.DefaultTimestampUTC, "caller", kitlog.DefaultCaller)
+    return logger
+}
+
+type loggerKey struct{}
+
+var key = loggerKey{}
+
+// FromContext extract logger from context.
+func FromContext(ctx context.Context) kitlog.Logger {
+    return ctx.Value(key).(kitlog.Logger)
+}
+
+// IntoContext put logger l into context.
+func IntoContext(ctx context.Context, l kitlog.Logger) context.Context {
+    return context.WithValue(ctx, key, l)
+}
+{{- else}}
+import (
+    "context"
+    "os"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+)
+
+// NewLogger create new zap json logger.
+func NewLogger() *zap.Logger {
+    var options []zap.Option
+    encoder := zapcore.NewJSONEncoder(zap.NewDevelopmentEncoderConfig())
+    options = append(options, zap.AddStacktrace(zap.ErrorLevel))
+    options = append(options, zap.Development())
+
+    core := zapcore.NewCore(
+        encoder,
+        os.Stdout,
+        zapcore.InfoLevel,
+    )
+
+    return zap.New(core, options...)
+}
+
+type loggerKey struct{}
+
+var key = loggerKey{}
+
+// FromContext extract logger from context.
+func FromContext(ctx context.Context) *zap.Logger {
+    return ctx.Value(key).(*zap.Logger)
+}
+
+// IntoContext put logger l into context.
+func IntoContext(ctx context.Context, l *zap.Logger) context.Context {
+    return context.WithValue(ctx, key, l)
+}
+{{end}}

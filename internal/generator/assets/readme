@@ -1,0 +1,40 @@
+# {{.module}}
+
+## Назначение
+
+// todo
+
+## Краткое описание endpoint'ов
+
+- GET /api/ping - тестовый ендпоинт.
+{{- if .use_consul}}
+- GET /health-check - используется Consul'ом для проверки работоспособности сервиса.
+{{- end}}
+{{- if .use_prometheus}}
+- GET /metrics - исользуется сервером prometheus для "полинга" метрик.
+{{- end}}
+
+## Системные требования и список технологий.
+
+- GO v 1.16
+- [Docker](https://www.docker.com/)
+{{- if .use_jaeger}}
+- [Jaeger](https://www.jaegertracing.io/){{- end}}
+{{- if .use_consul}}
+- [Consul](https://www.consul.io/){{- end}}
+{{- if .use_clickhouse}}
+- [Clickhouse DB](https://clickhouse.tech/docs/ru/)
+{{- end}}
+{{- if .use_postgresql}}
+- [Clickhouse DB](https://www.postgresql.org/)
+{{- end}}
+{{- if .use_prometheus}}
+- [Prometheus](https://prometheus.io/)
+{{- end}}
+{{- if .use_gorilla_mux}}
+- [GO-kit](https://github.com/go-kit/kit)
+{{- end}}
+
+## Deployment
+
+// todo

@@ -1,0 +1,142 @@
+package internal
+
+import (
+	"context"
+	"{{.module}}/internal/config"
+	"fmt"
+	"net/http"
+	httptransport "{{.module}}/internal/transport/http"
+{{- if .use_gorilla_mux }}
+	"{{.module}}/internal/endpoint"
+{{- end }}
+	"time"
+{{- if .use_gokit_logger}}
+	kitlog "github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
+{{- end}}
+{{- if .use_zap_logger}}
+    "go.uber.org/zap"
+{{- end}}
+{{- if .use_clickhouse}}
+	"database/sql"
+    _ "github.com/ClickHouse/clickhouse-go"
+{{- end}}
+{{- if .use_postgresql}}
+	"github.com/jackc/pgx/v4/pgxpool"
+{{- end}}
+
+	"golang.org/x/sync/errgroup"
+)
+
+const closeHttpTimeout = 5 * time.Second
+
+type Option func(*App)
+
+{{if .use_gokit_logger}}
+// WithLogger adding logger option.
+func WithLogger(l kitlog.Logger) Option {
+	return func(a *App) {
+		a.logger = l
+	}
+}
+{{- end}}
+{{- if .use_zap_logger}}
+// WithLogger adding logger option.
+func WithLogger(l *zap.Logger) Option {
+	return func(a *App) {
+		a.logger = l
+	}
+}
+{{- end}}
+
+// App is main application instance.
+type App struct {
+	cfg     *config.Configuration
+	httpSrv *http.Server
+    {{- if .use_gokit_logger}}
+	logger kitlog.Logger
+	{{- end}}
+    {{- if .use_zap_logger}}
+	logger *zap.Logger
+	{{- end}}
+}
+
+// NewApp returns instance of app.
+func NewApp(cfg *config.Configuration, opts ...Option) *App {
+	app := &App{
+		cfg:    cfg,
+        {{- if .use_gokit_logger}}
+        logger: kitlog.NewNopLogger(),
+        {{- end}}
+		{{- if .use_zap_logger}}
+		logger: zap.NewNop(),
+		{{- end}}
+	}
+
+	for _, opt := range opts {
+		opt(app)
+	}
+
+	return app
+}
+
+// Run lunch application.
+func (a *App) Run(ctx context.Context) (err error) {
+	eg := errgroup.Group{}
+    {{- if .use_clickhouse}}
+
+    chConn, err := sql.Open("clickhouse", a.cfg.Ch.DSN)
+    if err != nil {
+        return fmt.Errorf("clickhouse: %w", err)
+    }
+    defer chConn.Close()
+    {{log "a.logger" "info" "open clickhouse connection"}}
+
+    if err = chConn.Ping(); err != nil {
+        return fmt.Errorf("clickhouse ping: %w", err)
+    }
+    {{log "a.logger" "info" "successful ping of clickhouse database"}}
+    {{- end}}
+    {{- if .use_postgresql}}
+
+    pool, err := pgxpool.Connect(ctx, fmt.Sprintf("%s?pool_max_conns=%d", a.cfg.Postgres.DSN, a.cfg.Postgres.MaxPoolConnections))
+    if err != nil {
+        return fmt.Errorf("postgres ping: %w", err)
+    }
+    defer pool.Close()
+
+    {{log "a.logger" "info" "open postgres connection"}}
+    {{- end}}
+
+    {{- if .use_gorilla_mux }}
+    a.httpSrv = httptransport.NewServer(endpoint.NewEndpoints(), a.logger)
+    {{- end }}
+    {{- if .use_gin }}
+    a.httpSrv = httptransport.NewServer(a.logger)
+    {{- end }}
+	{{log "a.logger" "info" "starting http server"}}
+
+	eg.Go(func() error {
+		if err = a.httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			return fmt.Errorf("http serve: %w", err)
+		}
+        {{log "a.logger" "info" "http server stopped"}}
+		return nil
+	})
+
+	return eg.Wait()
+}
+
+// Stop stop application.
+func (a *App) Stop() error {
+    {{log "a.logger" "info" "stopping application"}}
+
+	ctx, cancel := context.WithTimeout(context.Background(), closeHttpTimeout)
+	defer cancel()
+
+	if err := a.httpSrv.Shutdown(ctx); err != nil {
+		return fmt.Errorf("http closing error: %w", err)
+	}
+
+	return nil
+}

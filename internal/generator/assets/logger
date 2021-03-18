@@ -31,17 +31,26 @@ func IntoContext(ctx context.Context, l kitlog.Logger) context.Context {
 {{- else}}
 import (
     "context"
-    "go.uber.org/zap"
+    "os"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // NewLogger create new zap json logger.
 func NewLogger() *zap.Logger {
-    zapLogger, err := zap.NewProduction()
-    if err != nil {
-        panic(err)
-    }
+    var options []zap.Option
+    encoder := zapcore.NewJSONEncoder(zap.NewDevelopmentEncoderConfig())
+    options = append(options, zap.AddStacktrace(zap.ErrorLevel))
+    options = append(options, zap.Development())
 
-    return zapLogger
+    core := zapcore.NewCore(
+        encoder,
+        os.Stdout,
+        zapcore.InfoLevel,
+    )
+
+    return zap.New(core, options...)
 }
 
 type loggerKey struct{}

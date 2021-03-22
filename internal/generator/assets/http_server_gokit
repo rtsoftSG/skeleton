@@ -70,7 +70,7 @@ func NewServer(endpoints endpoint.Endpoints, l *zap.Logger) *http.Server {
     r.Methods("GET").Path("/health-check").HandlerFunc(
         func(writer http.ResponseWriter, request *http.Request) {
             writer.WriteHeader(200)
-            writer.Write([]byte("{}"))
+            _, _ = writer.Write([]byte("{}"))
         },
     )
     {{- end}}

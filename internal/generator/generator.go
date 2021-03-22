@@ -57,6 +57,17 @@ func Run(settings *Settings) error {
 		return err
 	}
 
+	log.Print("create golangci-lint yml config file ...")
+	{
+		if err := execTpl(g.writeGOlangCILint, path.Join(rootDir, ".golangci.yml")); err != nil {
+			return err
+		}
+
+		if err := execTpl(g.writeGOlangCILintErrCheckExcludes, path.Join(rootDir, ".errcheck_excludes.txt")); err != nil {
+			return err
+		}
+	}
+
 	log.Print("create main.go ...")
 	if err := execTplAndFormat(g.writeMain, path.Join(rootDir, "cmd", g.settings.ProjectName, "main.go")); err != nil {
 		return err
@@ -280,6 +291,24 @@ func (g *generator) writeMakefile(w io.Writer) error {
 	}
 
 	return tpl.Execute(w, map[string]interface{}{"module": g.settings.ProjectName})
+}
+
+func (g *generator) writeGOlangCILint(w io.Writer) error {
+	tpl, err := g.createTemplate("golangci_cfg")
+	if err != nil {
+		return err
+	}
+
+	return tpl.Execute(w, map[string]interface{}{})
+}
+
+func (g *generator) writeGOlangCILintErrCheckExcludes(w io.Writer) error {
+	tpl, err := g.createTemplate("errcheck_excludes")
+	if err != nil {
+		return err
+	}
+
+	return tpl.Execute(w, map[string]interface{}{})
 }
 
 func (g *generator) writeReadme(w io.Writer) error {

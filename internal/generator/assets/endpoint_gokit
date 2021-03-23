@@ -34,7 +34,7 @@ type PingResponse struct {
 func MakePingEndpoint() endpoint.Endpoint {
 	return func(_ context.Context, request interface{}) (response interface{}, err error) {
 		req := request.(PingRequest)
-		req = req
+		req = req //nolint
 		return PingResponse{Result: "pong"}, nil
 	}
 }

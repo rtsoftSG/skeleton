@@ -62,6 +62,9 @@ func LoadConfig(name string) (*Configuration, error) {
 	vConsul.SetConfigType("yaml")
 
 	if err = vConsul.ReadRemoteConfig(); err != nil {
+        if err.Error() == "Remote Configurations Error: No Files Found" {
+            return &cfg, nil
+        }
 		return nil, fmt.Errorf("error reading remote configuration, %w", err)
 	}
 

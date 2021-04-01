@@ -253,7 +253,8 @@ func (g *generator) createDirectoryLayout() error {
 
 func (g *generator) createTemplate(fileName string) (*template.Template, error) {
 	return template.New(fileName).Funcs(template.FuncMap{
-		"log": makeLogFunc(g.settings.Logger),
+		"log":    makeLogFunc(g.settings.Logger),
+		"logErr": makeLogErrFunc(g.settings.Logger),
 	}).ParseFS(templates, "assets/"+fileName)
 }
 
@@ -504,6 +505,21 @@ func makeLogFunc(logger LoggerChoice) func(logger, lvl string, msg string) strin
 	case Zap:
 		return func(logger, lvl, msg string) string {
 			return logger + "." + strings.Title(strings.ToLower(lvl)) + "(\"" + msg + "\")"
+		}
+	default:
+		panic("unknown logger " + logger)
+	}
+}
+
+func makeLogErrFunc(logger LoggerChoice) func(logger, msg, err string) string {
+	switch logger {
+	case GoKit:
+		return func(logger, msg, err string) string {
+			return "level.Error(" + logger + ").Log(\"" + msg + "\", " + err + ")"
+		}
+	case Zap:
+		return func(logger, msg, err string) string {
+			return logger + ".Error(\"" + msg + "\", zap.Error(" + err + "))"
 		}
 	default:
 		panic("unknown logger " + logger)

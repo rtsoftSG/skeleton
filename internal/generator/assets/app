@@ -52,7 +52,6 @@ func WithLogger(l *zap.Logger) Option {
 // App is main application instance.
 type App struct {
 	cfg     *config.Configuration
-	httpSrv *http.Server
     {{- if .use_gokit_logger}}
 	logger kitlog.Logger
 	{{- end}}
@@ -81,8 +80,7 @@ func NewApp(cfg *config.Configuration, opts ...Option) *App {
 }
 
 // Run lunch application.
-func (a *App) Run(ctx context.Context) (err error) {
-	eg := errgroup.Group{}
+func (a *App) Run(eg *errgroup.Group, ctx context.Context) (err error) {
     {{- if .use_clickhouse}}
 
     chConn, err := sql.Open("clickhouse", a.cfg.Ch.DSN)
@@ -109,34 +107,32 @@ func (a *App) Run(ctx context.Context) (err error) {
     {{- end}}
 
     {{- if .use_gorilla_mux }}
-    a.httpSrv = httptransport.NewServer(endpoint.NewEndpoints(), a.logger)
+    httpSrv := httptransport.NewServer(endpoint.NewEndpoints(), a.logger)
     {{- end }}
     {{- if .use_gin }}
-    a.httpSrv = httptransport.NewServer(a.logger)
+    httpSrv := httptransport.NewServer(a.logger)
     {{- end }}
 	{{log "a.logger" "info" "starting http server"}}
 
 	eg.Go(func() error {
-		if err = a.httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err = httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			return fmt.Errorf("http serve: %w", err)
 		}
         {{log "a.logger" "info" "http server stopped"}}
 		return nil
 	})
+	eg.Go(func() error {
+		<-ctx.Done()
+		{{log "a.logger" "info" "stopping http server"}}
+
+		sdCtx, cancel := context.WithTimeout(context.Background(), closeHttpTimeout)
+		defer cancel()
+
+		if err := httpSrv.Shutdown(sdCtx); err != nil {
+			return fmt.Errorf("http closing error: %w", err)
+		}
+		return nil
+	})
 
 	return eg.Wait()
-}
-
-// Stop stop application.
-func (a *App) Stop() error {
-    {{log "a.logger" "info" "stopping application"}}
-
-	ctx, cancel := context.WithTimeout(context.Background(), closeHttpTimeout)
-	defer cancel()
-
-	if err := a.httpSrv.Shutdown(ctx); err != nil {
-		return fmt.Errorf("http closing error: %w", err)
-	}
-
-	return nil
 }

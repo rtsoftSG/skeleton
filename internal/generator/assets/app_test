@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"golang.org/x/sync/errgroup"
 	"strings"
 	"testing"
 	"time"
@@ -18,6 +19,7 @@ type APPServerTS struct {
 	suite.Suite
 	app    *internal.App
 	cancel context.CancelFunc
+	eg     *errgroup.Group
 }
 
 func (a *APPServerTS) SetupSuite() {
@@ -26,17 +28,20 @@ func (a *APPServerTS) SetupSuite() {
 	var ctx context.Context
 	ctx, a.cancel = context.WithCancel(context.Background())
 
+	eg, appCtx := errgroup.WithContext(ctx)
+	a.eg = eg
+
 	go func() {
-		a.NoError(a.app.Run(ctx))
+		a.NoError(a.app.Run(eg, appCtx))
 	}()
 
-	// wait for server is starting
 	time.Sleep(time.Second)
 }
 
 func (a *APPServerTS) TearDownSuite() {
 	a.cancel()
-	a.NoError(a.app.Stop())
+
+	_ = a.eg.Wait()
 }
 
 func TestAPPServer(t *testing.T) {

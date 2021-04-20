@@ -5,7 +5,6 @@ import (
 	"flag"
 	{{- if .use_gokit_logger}}
 	"github.com/go-kit/kit/log/level"
-	kitlog "github.com/go-kit/kit/log"
 	"os"
 	{{- end}}
 	"log"
